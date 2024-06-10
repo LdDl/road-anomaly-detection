@@ -1,0 +1,8 @@
+[input]
+    # Source URL of video: https://www.youtube.com/watch?v=KBsqQez-O4w
+    video_src = "./data/tests/test1.mp4"
+    # Use string below for usage with CSI camera (where sensor-id is camera indentifier)
+    # video_src = "nvarguscamerasrc sensor-id=0 ! video/x-raw(memory:NVMM), width=(int)1280, height=(int)720, format=(string)NV12, framerate=(fraction)30/1 ! nvvidconv flip-method=0 ! video/x-raw, width=(int)1280, height=(int)720, format=(string)BGRx ! videoconvert ! video/x-raw, format=(string)BGR ! appsink"
+    # Two options: rtsp / any number corresponding to local camera (device)
+    typ = "rtsp"
+    # typ = "device"

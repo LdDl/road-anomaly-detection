@@ -18,7 +18,7 @@ impl fmt::Display for VideoCaptureInternalError {
 }
 
 #[derive(Debug)]
-enum VideoCaptureError {
+pub enum VideoCaptureError {
     VideoError(VideoCaptureInternalError),
     OpenCVError(opencv::Error),
 }
