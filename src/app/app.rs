@@ -1,8 +1,8 @@
 use crate::video_capture;
-use std::fmt;
-use std::fs;
-use toml;
-use serde::{ Deserialize, Serialize };
+use crate::app::app_settings;
+use crate::app::app_error::AppError;
+use crate::app::app_error::AppInternalError;
+
 use opencv::{
     videoio::VideoCapture,
     prelude::VideoCaptureTrait,
@@ -19,47 +19,9 @@ use opencv::{
 
 const EMPTY_FRAMES_LIMIT: u16 = 60;
 
-#[derive(Debug)]
-pub struct AppInternalError{typ: i16}
-impl fmt::Display for AppInternalError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self.typ {
-            1 => write!(f, "Invalid device identifier"),
-            2 => write!(f, "Video has not been opened"),
-            _ => write!(f, "Undefined VideoCapture error")
-        }
-    }
-}
-
-#[derive(Debug)]
-pub enum AppError {
-    Internal(AppInternalError),
-    VideoError(video_capture::VideoCaptureError),
-    OpenCVError(opencv::Error),
-    TOMLError(toml::de::Error),
-}
-
-impl From<video_capture::VideoCaptureError> for AppError {
-    fn from(e: video_capture::VideoCaptureError) -> Self {
-        AppError::VideoError(e)
-    }
-}
-
-impl From<opencv::Error> for AppError {
-    fn from(e: opencv::Error) -> Self {
-        AppError::OpenCVError(e)
-    }
-}
-
-impl From<toml::de::Error> for AppError {
-    fn from(e: toml::de::Error) -> Self {
-        AppError::TOMLError(e)
-    }
-}
-
 pub struct App {
-    pub input: InputSettings,
-    pub output: OutputSettings,
+    pub input: app_settings::InputSettings,
+    pub output: app_settings::OutputSettings,
 }
 
 impl App {
@@ -133,47 +95,4 @@ fn probe_video(capture: &VideoCapture) ->  Result<(f32, f32, f32), AppError> {
     Ok((frame_cols, frame_rows, fps))
 }
 
-#[derive(Serialize, Deserialize, Clone)]
-pub struct InputSettings {
-    #[serde(rename = "video_src")]
-    pub video_source: String,
-    #[serde(rename = "typ")]
-    pub video_source_typ: String,
-}
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct OutputSettings {
-    pub enable: bool,
-    pub width: i32,
-    pub height: i32,
-    pub window_name: String,
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct AppSettings {
-    pub input: InputSettings,
-    pub output: OutputSettings,
-}
-
-impl AppSettings {
-    pub fn new_from_file(filename: &str) -> Result<Self, AppError> {
-        let toml_contents = fs::read_to_string(filename).expect(&format!("Something went wrong reading the file: '{}'", &filename));
-        let app_settings = toml::from_str::<AppSettings>(&toml_contents)?;
-        Ok(app_settings)
-    }
-    pub fn build(&self) -> Result<App, AppError> {
-        Ok(App {
-            input: self.input.clone(),
-            output: self.output.clone()
-        })
-    }
-}
-
-impl fmt::Display for AppSettings {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "\tVideo input type: {}\n\tVideo URI: {}",
-            self.input.video_source_typ,
-            self.input.video_source,
-        )
-    }
-}
