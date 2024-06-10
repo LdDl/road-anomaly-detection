@@ -6,3 +6,10 @@
     # Two options: rtsp / any number corresponding to local camera (device)
     typ = "rtsp"
     # typ = "device"
+
+[output]
+    # Define attributes for imshow() if needed
+    enable = true
+    width = 1024
+    height = 720
+    window_name = "Road anomaly detector"

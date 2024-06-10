@@ -9,6 +9,12 @@ use opencv::{
     prelude::VideoCaptureTraitConst,
     prelude::MatTraitConst,
     core::Mat,
+    core::Size,
+    imgproc::resize,
+    highgui::named_window,
+    highgui::resize_window,
+    highgui::imshow,
+    highgui::wait_key,
 };
 
 const EMPTY_FRAMES_LIMIT: u16 = 60;
@@ -53,6 +59,7 @@ impl From<toml::de::Error> for AppError {
 
 pub struct App {
     pub input: InputSettings,
+    pub output: OutputSettings,
 }
 
 impl App {
@@ -67,6 +74,13 @@ impl App {
         }
 
         let mut empty_frames_countrer: u16 = 0;
+        let mut resized_frame = Mat::default();
+        let window = &self.output.window_name;
+        if self.output.enable {
+            named_window(window, 1)?;
+            resize_window(window, self.output.width, self.output.height)?;
+        }
+
         loop {
             let mut read_frame = Mat::default();
             match video_capture.read(&mut read_frame) {
@@ -84,6 +98,17 @@ impl App {
                     break
                 }
                 continue;
+            }
+
+            if self.output.enable {
+                resize(&read_frame, &mut resized_frame, Size::new(self.output.width, self.output.height), 1.0, 1.0, 1)?;
+                if resized_frame.size()?.width > 0 {
+                    imshow(window, &resized_frame)?;
+                }
+                let key = wait_key(10)?;
+                if key == 27 /* esc */ || key == 115 /* s */ || key == 83 /* S */ {
+                    break;
+                }
             }
         }
         Ok(())
@@ -116,9 +141,18 @@ pub struct InputSettings {
     pub video_source_typ: String,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct OutputSettings {
+    pub enable: bool,
+    pub width: i32,
+    pub height: i32,
+    pub window_name: String,
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct AppSettings {
     pub input: InputSettings,
+    pub output: OutputSettings,
 }
 
 impl AppSettings {
@@ -130,6 +164,7 @@ impl AppSettings {
     pub fn build(&self) -> Result<App, AppError> {
         Ok(App {
             input: self.input.clone(),
+            output: self.output.clone()
         })
     }
 }
