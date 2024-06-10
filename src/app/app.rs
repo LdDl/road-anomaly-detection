@@ -1,4 +1,6 @@
 use crate::video_capture;
+use crate::video_capture::ThreadedFrame;
+
 use crate::app::app_settings;
 use crate::app::app_error::AppError;
 use crate::app::app_error::AppInternalError;
@@ -16,6 +18,9 @@ use opencv::{
     highgui::imshow,
     highgui::wait_key,
 };
+
+use std::thread;
+use std::sync::mpsc;
 
 const EMPTY_FRAMES_LIMIT: u16 = 60;
 
@@ -35,35 +40,72 @@ impl App {
             return Err(AppError::Internal(AppInternalError{typ: 2}))
         }
 
-        let mut empty_frames_countrer: u16 = 0;
+        let (tx_capture, rx_capture): (mpsc::SyncSender<ThreadedFrame>, mpsc::Receiver<ThreadedFrame>) = mpsc::sync_channel(0);
+        thread::spawn(move || {
+            let mut frames_counter: f32 = 0.0;
+            let mut total_seconds: f32 = 0.0;
+            let mut overall_seconds: f32 = 0.0;
+            let mut empty_frames_countrer: u16 = 0;
+            loop {
+                let mut read_frame = Mat::default();
+                match video_capture.read(&mut read_frame) {
+                    Ok(_) => {},
+                    Err(_) => {
+                        println!("Can't read next frame");
+                        break;
+                    }
+                };
+                if read_frame.empty() {
+                    println!("[WARNING]: Empty frame");
+                    empty_frames_countrer += 1;
+                    if empty_frames_countrer >= EMPTY_FRAMES_LIMIT {
+                        println!("Too many empty frames");
+                        break
+                    }
+                    continue;
+                }
+                frames_counter += 1.0;
+                let second_fraction = total_seconds + (frames_counter / fps);
+                if frames_counter >= fps {
+                    total_seconds += 1.0;
+                    overall_seconds += 1.0;
+                    frames_counter = 0.0;
+                }
+                let frame = ThreadedFrame{
+                    frame: read_frame,
+                    overall_seconds: overall_seconds,
+                    current_second: second_fraction,
+                };
+                match tx_capture.send(frame) {
+                    Ok(_)=>{},
+                    Err(_err) => {
+                        // Closed channel?
+                        // println!("Error on send frame to detection thread: {}", _err)
+                    }
+                };
+            }
+            match video_capture.release() {
+                Ok(_) => {
+                    println!("Video capture has been closed successfully");
+                },
+                Err(err) => {
+                    println!("Can't release video capturer due the error: {}", err);
+                }
+            };
+        });
+
+
         let mut resized_frame = Mat::default();
         let window = &self.output.window_name;
         if self.output.enable {
             named_window(window, 1)?;
             resize_window(window, self.output.width, self.output.height)?;
         }
-
-        loop {
-            let mut read_frame = Mat::default();
-            match video_capture.read(&mut read_frame) {
-                Ok(_) => {},
-                Err(_) => {
-                    println!("Can't read next frame");
-                    break;
-                }
-            };
-            if read_frame.empty() {
-                println!("[WARNING]: Empty frame");
-                empty_frames_countrer += 1;
-                if empty_frames_countrer >= EMPTY_FRAMES_LIMIT {
-                    println!("Too many empty frames");
-                    break
-                }
-                continue;
-            }
-
+        
+        for received in rx_capture {
+            let frame = received.frame.clone();
             if self.output.enable {
-                resize(&read_frame, &mut resized_frame, Size::new(self.output.width, self.output.height), 1.0, 1.0, 1)?;
+                resize(&frame, &mut resized_frame, Size::new(self.output.width, self.output.height), 1.0, 1.0, 1)?;
                 if resized_frame.size()?.width > 0 {
                     imshow(window, &resized_frame)?;
                 }
