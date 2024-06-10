@@ -9,12 +9,13 @@ In W.I.P. stage
 - [Installation and usage](#installation-and-usage)
 - [Support](#support)
 
-
 ## Video showcase
 @w.i.p.
 
 ## About
 This project is aimed to register road traffic accidents, foreign object and other anomaly situations on roads. It is pretty simple and uses just YOLO (both [traditional](https://github.com/AlexeyAB/darknet) and [Ultralytics version](https://github.com/ultralytics/ultralytics) could be used). Some advanced techniques like 3D-CNN, LSTM's and others could be used, but I do not have that much time so PR's are very welcome.
+
+I do have also utility for monitoring road traffic flow parameters [here](https://github.com/LdDl/rust-road-traffic)
 
 ## How does it work?
 @w.i.p.
