@@ -13,13 +13,14 @@ use opencv::{
     core::Mat,
     core::Size,
     imgproc::resize,
+    video::{create_background_subtractor_mog2, BackgroundSubtractorMOG2Trait, BackgroundSubtractorTraitConst},
     highgui::named_window,
     highgui::resize_window,
     highgui::imshow,
     highgui::wait_key,
 };
 
-use std::thread;
+use std::{fs::read, thread};
 use std::sync::mpsc;
 
 const EMPTY_FRAMES_LIMIT: u16 = 60;
@@ -101,10 +102,17 @@ impl App {
             named_window(window, 1)?;
             resize_window(window, self.output.width, self.output.height)?;
         }
-        
+       
+        let mut bg_subtractor = create_background_subtractor_mog2((1.0 * fps).floor() as i32, 16.0, false).unwrap();
+        let mut foreground_mask = Mat::default();
+
         for received in rx_capture {
             let frame = received.frame.clone();
+            bg_subtractor.apply(&frame, &mut foreground_mask, -1.0).unwrap();
+            let mut frame_background = Mat::default(); 
+            bg_subtractor.get_background_image(&mut frame_background).unwrap();
             if self.output.enable {
+                // resize(&frame_background, &mut resized_frame, Size::new(self.output.width, self.output.height), 1.0, 1.0, 1)?;
                 resize(&frame, &mut resized_frame, Size::new(self.output.width, self.output.height), 1.0, 1.0, 1)?;
                 if resized_frame.size()?.width > 0 {
                     imshow(window, &resized_frame)?;
