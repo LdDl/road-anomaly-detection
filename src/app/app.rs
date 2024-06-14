@@ -6,23 +6,11 @@ use crate::app::app_error::AppError;
 use crate::app::app_error::AppInternalError;
 
 use opencv::{
-    videoio::VideoCapture,
-    prelude::VideoCaptureTrait,
-    prelude::VideoCaptureTraitConst,
-    prelude::MatTraitConst,
-    core::Mat,
-    core::Size,
-    imgproc::resize,
-    video::{create_background_subtractor_mog2, BackgroundSubtractorMOG2Trait, BackgroundSubtractorTraitConst},
-    highgui::named_window,
-    highgui::resize_window,
-    highgui::imshow,
-    highgui::wait_key,
+    bgsegm, core::Mat, core::{MatTraitConstManual, Size}, highgui::imshow, highgui::named_window, highgui::resize_window, highgui::wait_key, imgproc::resize, prelude::MatTraitConst, prelude::VideoCaptureTrait, prelude::VideoCaptureTraitConst, video::{create_background_subtractor_mog2, BackgroundSubtractorMOG2Trait, BackgroundSubtractorTrait, BackgroundSubtractorTraitConst}, videoio::VideoCapture
 };
 
 use std::{fs::read, thread};
 use std::sync::mpsc;
-
 const EMPTY_FRAMES_LIMIT: u16 = 60;
 
 pub struct App {
@@ -103,11 +91,13 @@ impl App {
             resize_window(window, self.output.width, self.output.height)?;
         }
        
-        let mut bg_subtractor = create_background_subtractor_mog2((1.0 * fps).floor() as i32, 16.0, false).unwrap();
+        // let mut bg_subtractor = create_background_subtractor_mog2((1.0 * fps).floor() as i32, 16.0, false).unwrap();
+        let mut bg_subtractor = opencv::bgsegm::create_background_subtractor_cnt(15, false, 15*60, true).unwrap();
         let mut foreground_mask = Mat::default();
 
         for received in rx_capture {
             let frame = received.frame.clone();
+            // median_frame(vec![frame.clone()]);
             bg_subtractor.apply(&frame, &mut foreground_mask, -1.0).unwrap();
             let mut frame_background = Mat::default(); 
             bg_subtractor.get_background_image(&mut frame_background).unwrap();
@@ -145,4 +135,15 @@ fn probe_video(capture: &VideoCapture) ->  Result<(f32, f32, f32), AppError> {
     Ok((frame_cols, frame_rows, fps))
 }
 
-
+fn median_frame(frames: Vec<Mat>) {
+    let rows = frames[0].rows();
+    let cols = frames[0].cols();
+    for frame in frames.iter() {
+        // let mut b_channel = Mat::default();
+        // let mut g_channel = Mat::default();
+        // let mut r_channel = Mat::default();
+        // opencv::core::extract_channel(&frame, &mut b_channel, 0);
+        // opencv::core::extract_channel(&frame, &mut g_channel, 1);
+        // opencv::core::extract_channel(&frame, &mut r_channel, 2);
+    }
+}
