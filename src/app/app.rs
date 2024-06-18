@@ -6,7 +6,11 @@ use crate::app::app_error::AppError;
 use crate::app::app_error::AppInternalError;
 
 use opencv::{
-    core::Mat, core::{Size}, highgui::imshow, highgui::named_window, highgui::resize_window, highgui::wait_key, imgproc::resize, prelude::MatTraitConst, prelude::VideoCaptureTrait, prelude::VideoCaptureTraitConst, video::{create_background_subtractor_mog2, BackgroundSubtractorMOG2Trait, BackgroundSubtractorTrait, BackgroundSubtractorTraitConst}, videoio::VideoCapture
+    core::Mat, core::{Size, get_cuda_enabled_device_count}, highgui::imshow, highgui::named_window, highgui::resize_window, highgui::wait_key, imgproc::resize, prelude::MatTraitConst, prelude::VideoCaptureTrait, prelude::VideoCaptureTraitConst, video::{create_background_subtractor_mog2, BackgroundSubtractorMOG2Trait, BackgroundSubtractorTrait, BackgroundSubtractorTraitConst}, videoio::VideoCapture,
+    dnn::DNN_BACKEND_CUDA,
+    dnn::DNN_TARGET_CUDA,
+    dnn::DNN_BACKEND_OPENCV,
+    dnn::DNN_TARGET_CPU,
 };
 
 use std::{thread};
@@ -24,17 +28,21 @@ pub struct App {
     pub input: app_settings::InputSettings,
     pub output: app_settings::OutputSettings,
     pub detection: app_settings::DetectionSettings,
+    pub model_format: ModelFormat,
+    pub model_version: ModelVersion
 }
 
 impl App {
     pub fn run(&mut self) -> Result<(), AppError> {
+        let mut neural_net = prepare_neural_net(self.model_format, self.model_version, &self.detection.network_weights, self.detection.network_cfg.clone(), (self.detection.net_width, self.detection.net_height))?;
+
         let mut video_capture = video_capture::get_video_capture(self.input.video_source.as_str(), self.input.video_source_typ.clone())?;
         let (width, height, fps) = probe_video(&video_capture)?;
         println!("Video probe: {{Width: {width}px | Height: {height}px | FPS: {fps}}}");
 
         let opened = VideoCapture::is_opened(&video_capture).map_err(AppError::from)?;
         if !opened {
-            return Err(AppError::Internal(AppInternalError{typ: 2}))
+            return Err(AppError::Internal(AppInternalError{typ: 2, txt: self.input.video_source.clone()}))
         }
 
         let (tx_capture, rx_capture): (mpsc::SyncSender<ThreadedFrame>, mpsc::Receiver<ThreadedFrame>) = mpsc::sync_channel(0);
@@ -141,6 +149,35 @@ fn probe_video(capture: &VideoCapture) ->  Result<(f32, f32, f32), AppError> {
     // let frame_cols = frame.cols() as f32;
     // let frame_rows = frame.rows() as f32;
     Ok((frame_cols, frame_rows, fps))
+}
+
+fn prepare_neural_net(mf: ModelFormat, mv: ModelVersion, weights: &str, configuration: Option<String>, net_size: (i32, i32)) -> Result<Box<dyn ModelTrait>, AppError> {
+
+    /* Check if CUDA is an option at all */
+    let cuda_count = get_cuda_enabled_device_count()?;
+    let cuda_available = cuda_count > 0;
+    println!("CUDA is {}", if cuda_available { "'available'" } else { "'not available'" });
+    println!("Model format is '{:?}'", mf);
+    println!("Model type is '{:?}'", mv);
+
+    // Hacky way to convert Option<String> to Option<&str>
+    let configuration_str = configuration.as_deref();
+
+    let neural_net = match new_from_file(
+        weights,
+        configuration_str,
+        (net_size.0, net_size.1),
+        mf, mv,
+        if cuda_available { DNN_BACKEND_CUDA } else { DNN_BACKEND_OPENCV },
+        if cuda_available { DNN_TARGET_CUDA } else { DNN_TARGET_CPU },
+        vec![]
+    ) {
+        Ok(result) => result,
+        Err(err) => {
+            panic!("Can't read network '{}' (with cfg '{:?}') due the error: {:?}", weights, configuration, err);
+        }
+    };
+    Ok(neural_net)
 }
 
 fn median_frame(frames: Vec<Mat>) {

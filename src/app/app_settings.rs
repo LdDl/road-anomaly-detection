@@ -1,9 +1,8 @@
-use crate::app::app_error::AppError;
+use crate::app::{app_error::AppError, AppInternalError};
 use crate::app::App;
 use serde::{ Deserialize, Serialize };
 use std::fs;
 use std::fmt;
-use std::error::Error;
 use od_opencv::model_format::{ModelFormat, ModelVersion};
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -37,22 +36,22 @@ pub struct DetectionSettings {
 }
 
 impl DetectionSettings {
-    pub fn get_nn_format(&self) -> Result<ModelFormat,  Box<dyn Error>> {
+    pub fn get_nn_format(&self) -> Result<ModelFormat, AppError> {
         match self.network_format.clone() {
             Some(mf) => {
                 match mf.to_lowercase().as_str() {
                     "darknet" => { Ok(ModelFormat::Darknet) },
                     "onnx" => { Ok(ModelFormat::ONNX) },
                     _ => { 
-                        return Err(format!("Can't prepare neural network due the unhandled format: {}", mf).into());
+                       Err(AppError::from(AppInternalError{typ: 3, txt: mf}))
                     }
                 }
             },
             None => { Ok(ModelFormat::Darknet) }
         }
     }
-    pub fn get_nn_version(&self) -> Result<ModelVersion,  Box<dyn Error>> {
-        match self.network_ver.clone() {
+    pub fn get_nn_version(&self) -> Result<ModelVersion, AppError> {
+        match self.network_ver {
             Some(mv) => {
                 match mv {
                     3 => { Ok(ModelVersion::V3) },
@@ -60,7 +59,7 @@ impl DetectionSettings {
                     7 => { Ok(ModelVersion::V7) },
                     8 => { Ok(ModelVersion::V8) },
                     _ => { 
-                        return Err(format!("Can't prepare neural network due the unhandled version: {}", mv).into());
+                        Err(AppError::from(AppInternalError{typ: 4, txt: format!("{}", mv)}))
                     }
                 }
             },
@@ -82,11 +81,16 @@ impl AppSettings {
         let app_settings = toml::from_str::<AppSettings>(&toml_contents)?;
         Ok(app_settings)
     }
+
     pub fn build(&self) -> Result<App, AppError> {
+        let mf = self.detection.get_nn_format()?;
+        let mv = self.detection.get_nn_version()?;
         Ok(App {
             input: self.input.clone(),
             output: self.output.clone(),
-            detection: self.detection.clone()
+            detection: self.detection.clone(),
+            model_format: mf,
+            model_version: mv
         })
     }
 }
