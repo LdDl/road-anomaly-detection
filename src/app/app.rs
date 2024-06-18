@@ -1,20 +1,25 @@
 use crate::video_capture;
 use crate::video_capture::ThreadedFrame;
 
+use crate::detection::process_yolo_detections;
+
 use crate::app::app_settings;
 use crate::app::app_error::AppError;
 use crate::app::app_error::AppInternalError;
 
 use opencv::{
-    core::Mat, core::{Size, get_cuda_enabled_device_count}, highgui::imshow, highgui::named_window, highgui::resize_window, highgui::wait_key, imgproc::resize, prelude::MatTraitConst, prelude::VideoCaptureTrait, prelude::VideoCaptureTraitConst, video::{create_background_subtractor_mog2, BackgroundSubtractorMOG2Trait, BackgroundSubtractorTrait, BackgroundSubtractorTraitConst}, videoio::VideoCapture,
+    core::Mat, core::{Size, Rect, Scalar, get_cuda_enabled_device_count}, highgui::imshow, highgui::named_window, highgui::resize_window, highgui::wait_key, imgproc::resize, prelude::MatTraitConst, prelude::VideoCaptureTrait, prelude::VideoCaptureTraitConst, video::{create_background_subtractor_mog2, BackgroundSubtractorMOG2Trait, BackgroundSubtractorTraitConst}, videoio::VideoCapture,
     dnn::DNN_BACKEND_CUDA,
     dnn::DNN_TARGET_CUDA,
     dnn::DNN_BACKEND_OPENCV,
     dnn::DNN_TARGET_CPU,
+    imgproc::LINE_4,
+    imgproc::rectangle,
 };
 
 use std::{thread};
 use std::sync::mpsc;
+use std::collections::HashSet;
 const EMPTY_FRAMES_LIMIT: u16 = 60;
 
 use od_opencv::{
@@ -107,17 +112,42 @@ impl App {
             resize_window(window, self.output.width, self.output.height)?;
         }
        
-        // let mut bg_subtractor = create_background_subtractor_mog2((1.0 * fps).floor() as i32, 16.0, false).unwrap();
-        let mut bg_subtractor = opencv::bgsegm::create_background_subtractor_cnt(15, false, 15*60, true).unwrap();
+        let color_anomaly_bbox = Scalar::from((0.0, 0.0, 255.0));
+
+        let mut bg_subtractor = create_background_subtractor_mog2((1.0 * fps).floor() as i32, 16.0, false).unwrap();
+        // let mut bg_subtractor = opencv::bgsegm::create_background_subtractor_cnt(15, false, 15*60, true).unwrap();
         let mut foreground_mask = Mat::default();
 
+        let conf_threshold: f32 = self.detection.conf_threshold;
+        let nms_threshold: f32 = self.detection.nms_threshold;
+        let target_classes = HashSet::from_iter(self.detection.target_classes.to_owned().unwrap_or(vec![]));
+        let net_classes = self.detection.net_classes.to_owned();
+        let time_frac = 1.0/fps;
+
         for received in rx_capture {
-            let frame = received.frame.clone();
-            // median_frame(vec![frame.clone()]);
+            let mut frame = received.frame.clone();
             bg_subtractor.apply(&frame, &mut foreground_mask, -1.0).unwrap();
             let mut frame_background = Mat::default(); 
             bg_subtractor.get_background_image(&mut frame_background).unwrap();
+            let (nms_bboxes, nms_classes_ids, nms_confidences) = match neural_net.forward(&frame_background, conf_threshold, nms_threshold) {
+                Ok((a, b, c)) => { (a, b, c) },
+                Err(err) => {
+                    println!("Can't process input of neural network due the error {:?}", err);
+                    break;
+                }
+            };
+            let mut tmp_detections = process_yolo_detections(&nms_bboxes, nms_classes_ids, nms_confidences, &net_classes, &target_classes, time_frac);
             if self.output.enable {
+                for object in tmp_detections.blobs.iter() {
+                    let bbox = object.get_bbox();
+                    let cv_rect = Rect::new(bbox.x.floor() as i32, bbox.y.floor() as i32, bbox.width as i32, bbox.height as i32);
+                    match rectangle(&mut frame, cv_rect, color_anomaly_bbox, 2, LINE_4, 0) {
+                        Ok(_) => {},
+                        Err(err) => {
+                            panic!("Can't draw rectangle at blob's bbox due the error: {:?}", err)
+                        }
+                    };
+                }
                 // resize(&frame_background, &mut resized_frame, Size::new(self.output.width, self.output.height), 1.0, 1.0, 1)?;
                 resize(&frame, &mut resized_frame, Size::new(self.output.width, self.output.height), 1.0, 1.0, 1)?;
                 if resized_frame.size()?.width > 0 {
@@ -180,15 +210,3 @@ fn prepare_neural_net(mf: ModelFormat, mv: ModelVersion, weights: &str, configur
     Ok(neural_net)
 }
 
-fn median_frame(frames: Vec<Mat>) {
-    let rows = frames[0].rows();
-    let cols = frames[0].cols();
-    for frame in frames.iter() {
-        // let mut b_channel = Mat::default();
-        // let mut g_channel = Mat::default();
-        // let mut r_channel = Mat::default();
-        // opencv::core::extract_channel(&frame, &mut b_channel, 0);
-        // opencv::core::extract_channel(&frame, &mut g_channel, 1);
-        // opencv::core::extract_channel(&frame, &mut r_channel, 2);
-    }
-}
