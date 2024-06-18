@@ -6,16 +6,24 @@ use crate::app::app_error::AppError;
 use crate::app::app_error::AppInternalError;
 
 use opencv::{
-    bgsegm, core::Mat, core::{MatTraitConstManual, Size}, highgui::imshow, highgui::named_window, highgui::resize_window, highgui::wait_key, imgproc::resize, prelude::MatTraitConst, prelude::VideoCaptureTrait, prelude::VideoCaptureTraitConst, video::{create_background_subtractor_mog2, BackgroundSubtractorMOG2Trait, BackgroundSubtractorTrait, BackgroundSubtractorTraitConst}, videoio::VideoCapture
+    core::Mat, core::{Size}, highgui::imshow, highgui::named_window, highgui::resize_window, highgui::wait_key, imgproc::resize, prelude::MatTraitConst, prelude::VideoCaptureTrait, prelude::VideoCaptureTraitConst, video::{create_background_subtractor_mog2, BackgroundSubtractorMOG2Trait, BackgroundSubtractorTrait, BackgroundSubtractorTraitConst}, videoio::VideoCapture
 };
 
-use std::{fs::read, thread};
+use std::{thread};
 use std::sync::mpsc;
 const EMPTY_FRAMES_LIMIT: u16 = 60;
+
+use od_opencv::{
+    model_format::ModelFormat,
+    model_format::ModelVersion,
+    model::new_from_file,
+    model::ModelTrait,
+};
 
 pub struct App {
     pub input: app_settings::InputSettings,
     pub output: app_settings::OutputSettings,
+    pub detection: app_settings::DetectionSettings,
 }
 
 impl App {

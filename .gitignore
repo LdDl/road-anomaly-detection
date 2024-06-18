@@ -1,2 +1,4 @@
 /target
 data/tests
+data/*.cfg
+data/*.weights

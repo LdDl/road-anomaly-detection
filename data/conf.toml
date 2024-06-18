@@ -13,3 +13,24 @@
     width = 1024
     height = 720
     window_name = "Road anomaly detector"
+
+
+[detection]
+    # Available model_versions: v3, v4, v7, v8
+    # Default is v3
+    network_ver = 3
+    # Available model formats: "darknet", "onnx"
+    # Default is "darknet"
+    network_format = "darknet"
+    network_weights = "./data/yolov3_best.weights"
+    network_cfg = "./data/accidents-yolov3.cfg"
+    conf_threshold = 0.4
+    nms_threshold = 0.2
+    net_width = 416
+    net_height = 416
+    # Target classes to be used in filtering.
+    # Leave array empty if all net classes should be used
+    target_classes = []
+    # Neural network classes
+    net_classes = ["moderate_accident", "object_accident", "severe_accident"]
+
