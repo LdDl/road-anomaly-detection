@@ -2,3 +2,5 @@
 data/tests
 data/*.cfg
 data/*.weights
+data/*.onnx
+data/*.bak
