@@ -141,6 +141,8 @@ impl App {
                 }
             };
             let mut tmp_detections = process_yolo_detections(&nms_bboxes, nms_classes_ids, nms_confidences, &net_classes, &target_classes, time_frac);
+            let relative_time = received.overall_seconds;
+            tracker.match_objects(&mut tmp_detections, relative_time);
             if self.output.enable {
                 for object in tmp_detections.blobs.iter() {
                     let bbox = object.get_bbox();
