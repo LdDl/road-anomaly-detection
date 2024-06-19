@@ -66,6 +66,7 @@ impl Tracker {
                         updated_unix_tm: current_ut,
                         updated_relative_second: current_relative_second,
                     };
+                    entry.insert(object_extra);
                 }
             }
         }
