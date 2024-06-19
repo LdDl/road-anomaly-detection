@@ -2,6 +2,7 @@ use crate::video_capture;
 use crate::video_capture::ThreadedFrame;
 
 use crate::detection::process_yolo_detections;
+use crate::tracker::Tracker;
 
 use crate::app::app_settings;
 use crate::app::app_error::AppError;
@@ -33,6 +34,7 @@ pub struct App {
     pub input: app_settings::InputSettings,
     pub output: app_settings::OutputSettings,
     pub detection: app_settings::DetectionSettings,
+    pub tracking: app_settings::TrackingSettings,
     pub model_format: ModelFormat,
     pub model_version: ModelVersion
 }
@@ -124,6 +126,8 @@ impl App {
         let net_classes = self.detection.net_classes.to_owned();
         let time_frac = 1.0/fps;
 
+        let mut tracker: Tracker = Tracker::new(fps.floor() as usize * self.tracking.delay_seconds, 0.3);
+        println!("Tracker initialized with following settings:\n\t{}", tracker);
         for received in rx_capture {
             let mut frame = received.frame.clone();
             bg_subtractor.apply(&frame, &mut foreground_mask, -1.0).unwrap();

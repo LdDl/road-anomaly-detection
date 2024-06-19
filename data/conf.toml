@@ -36,3 +36,6 @@
     net_classes = ["moderate_accident", "severe_accident"]
     # net_classes = ["moderate_accident", "object_accident", "severe_accident"]
 
+[tracking]
+    # Adjust number of seconds to forget event 
+    delay_seconds = 30

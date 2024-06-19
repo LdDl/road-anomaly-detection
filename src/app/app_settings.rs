@@ -68,11 +68,17 @@ impl DetectionSettings {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct TrackingSettings {
+    pub delay_seconds: usize,
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct AppSettings {
     pub input: InputSettings,
     pub output: OutputSettings,
     pub detection: DetectionSettings,
+    pub tracking: TrackingSettings,
 }
 
 impl AppSettings {
@@ -89,6 +95,7 @@ impl AppSettings {
             input: self.input.clone(),
             output: self.output.clone(),
             detection: self.detection.clone(),
+            tracking: self.tracking.clone(),
             model_format: mf,
             model_version: mv
         })
@@ -97,13 +104,14 @@ impl AppSettings {
 
 impl fmt::Display for AppSettings {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "\tVideo input type: {}\n\tVideo URI: {}\n\tNetwork type: {:?}\n\tNetwork version: {:?}\n\tNetwork weights: {}\n\tNetwork configuration: {:?}",
+        write!(f, "\tVideo input type: {}\n\tVideo URI: {}\n\tNetwork type: {:?}\n\tNetwork version: {:?}\n\tNetwork weights: {}\n\tNetwork configuration: {:?}\n\tTracker delay seconds: {}",
             self.input.video_source_typ,
             self.input.video_source,
             self.detection.network_format,
             self.detection.network_ver,
             self.detection.network_weights,
             self.detection.network_cfg,
+            self.tracking.delay_seconds
         )
     }
 }

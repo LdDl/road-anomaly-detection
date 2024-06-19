@@ -514,6 +514,7 @@ dependencies = [
  "opencv",
  "serde",
  "toml",
+ "uuid",
 ]
 
 [[package]]
