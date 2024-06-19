@@ -11,6 +11,7 @@ impl fmt::Display for AppInternalError {
             2 => write!(f, "Video has not been opened"),
             3 => write!(f, "Bad model format: '{}'", self.txt),
             4 => write!(f, "Bad model version: '{}'", self.txt),
+            5 => write!(f, "Bad tracker parameters: '{}'", self.txt),
             _ => write!(f, "Undefined VideoCapture error")
         }
     }

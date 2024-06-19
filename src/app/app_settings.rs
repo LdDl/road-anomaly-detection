@@ -72,6 +72,7 @@ impl DetectionSettings {
 pub struct TrackingSettings {
     pub delay_seconds: usize,
     pub lifetime_seconds_min: u64,
+    pub lifetime_seconds_max: u64,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -100,6 +101,9 @@ impl AppSettings {
     pub fn build(&self) -> Result<App, AppError> {
         let mf = self.detection.get_nn_format()?;
         let mv = self.detection.get_nn_version()?;
+        if self.tracking.lifetime_seconds_min >= self.tracking.lifetime_seconds_max {
+            return Err(AppError::from(AppInternalError{typ: 5, txt: format!("Incorrect lifetimes. Min: {}, Max: {}", self.tracking.lifetime_seconds_min, self.tracking.lifetime_seconds_max)}));
+        }
         Ok(App {
             input: self.input.clone(),
             output: self.output.clone(),

@@ -41,6 +41,8 @@
     delay_seconds = 30
     # Adjust number of seconds to consider event is actually exists
     lifetime_seconds_min = 3
+    # Adjust number of seconds after event would be considered as new even if detection object is the same
+    lifetime_seconds_max = 5
 
 # Leave [[zones]] empty if you want zone with size of the frame
 [[zones]]
