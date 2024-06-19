@@ -45,8 +45,8 @@ pub fn process_yolo_detections(nms_bboxes: &Vec<RectCV>, nms_classes_ids: Vec<us
         }
         class_names.push(classname);
         let center_x = (bbox.x as f32 + bbox.width as f32 / 2.0);
-        let bottom_center_y = (bbox.y as f32 + bbox.height as f32);
-        let kb: SimpleBlob = SimpleBlob::new_with_center_dt(Point::new(center_x, bottom_center_y), Rect::new(bbox.x as f32, bbox.y as f32, bbox.width as f32, bbox.height as f32), dt);
+        let center_y = (bbox.y as f32 + bbox.height as f32 / 2.0);
+        let kb: SimpleBlob = SimpleBlob::new_with_center_dt(Point::new(center_x, center_y), Rect::new(bbox.x as f32, bbox.y as f32, bbox.width as f32, bbox.height as f32), dt);
         // let mut kb = SimpleBlob::new_with_dt(Rect::new(bbox.x as f32, bbox.y as f32, bbox.width as f32, bbox.height as f32), dt);
         aggregated_data.push(kb);
     }

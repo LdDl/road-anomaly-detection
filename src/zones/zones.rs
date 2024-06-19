@@ -1,3 +1,5 @@
+use crate::tracker::{self, Tracker};
+
 use opencv::{
     core::Mat, core::Point2f, core::Vector, core::Point2i, core::Scalar, imgproc::line, imgproc::put_text,
     imgproc::FONT_HERSHEY_SIMPLEX, imgproc::LINE_8,
@@ -43,11 +45,19 @@ impl Zone {
     }
     pub fn contains_point(&self, x: f32, y: f32) -> bool {
         let ppt = point_polygon_test(&self.pixel_coordinates, Point2f::new(x, y), false).unwrap();
-        ppt == 1.0 || ppt == 0.0 || ppt == -1.0
+        ppt > 0.0 
     }
     pub fn draw(&self, img: &mut Mat) {
         for seg in self.segments {
             line(img, seg[0], seg[1], self.color, 2, LINE_8, 0).unwrap();
         } 
+    }
+    pub fn process_tracker(&self, tracker: &Tracker) {
+        for (objectID, object) in tracker.engine.objects.iter() {
+            let center = object.get_center();
+            if self.contains_point(center.x, center.y) {
+                todo!("handle");
+            }
+        }
     }
 }

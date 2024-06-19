@@ -43,7 +43,7 @@
 # Leave [[zones]] empty if you want zone with size of the frame
 [[zones]]
     id = "zone_1"
-    geometry = [[904, 336], [1401, 297], [1567, 520], [804, 528]]
+    geometry = [[904, 136], [1401, 197], [1567, 520], [804, 528]]
     color_rgb = [0, 0, 255]
 
 [[zones]]

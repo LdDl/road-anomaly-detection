@@ -159,6 +159,9 @@ impl App {
             let relative_time = received.overall_seconds;
             tracker.match_objects(&mut tmp_detections, relative_time).unwrap();
             
+            for zone in zones.iter() {
+                zone.process_tracker(&tracker)
+            }
             if self.output.enable {
                 draw_bboxes(&mut frame, &tracker, bbox_scalar, bbox_scalar_inverse);
                 draw_identifiers(&mut frame, &tracker, id_scalar, id_scalar_inverse);
