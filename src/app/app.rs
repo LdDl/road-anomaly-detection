@@ -133,10 +133,11 @@ impl App {
         let time_frac = 1.0/fps;
         
         let lifetime_seconds_min = self.tracking.lifetime_seconds_min as i64;
+        let lifetime_seconds_max = self.tracking.lifetime_seconds_max as i64;
         let mut tracker: Tracker = Tracker::new(fps.floor() as usize, 0.3);
         println!("Tracker initialized with following settings:\n\t{}", tracker);
     
-        let zones: Vec<Zone> = match self.zones_settings.clone() {
+        let mut zones: Vec<Zone> = match self.zones_settings.clone() {
             Some(d) => {
                 d.iter().map(|zone_settings| {
                     Zone::new(zone_settings.id.clone(), zone_settings.geometry, zone_settings.color_rgb)
@@ -160,8 +161,8 @@ impl App {
             let relative_time = received.overall_seconds;
             tracker.match_objects(&mut tmp_detections, relative_time).unwrap();
             
-            for zone in zones.iter() {
-                zone.process_tracker(&tracker, lifetime_seconds_min);
+            for zone in zones.iter_mut() {
+                zone.process_tracker(&mut tracker, lifetime_seconds_min, lifetime_seconds_max);
             }
             if self.output.enable {
                 draw_bboxes(&mut frame, &tracker, bbox_scalar, bbox_scalar_inverse);

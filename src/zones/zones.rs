@@ -1,4 +1,4 @@
-use crate::tracker::{self, Tracker};
+use crate::tracker::{Tracker};
 
 use uuid::Uuid;
 use opencv::{
@@ -7,12 +7,15 @@ use opencv::{
     imgproc::point_polygon_test,
 };
 
+use std::collections::HashSet;
+
 #[derive(Debug)]
 pub struct Zone {
     pub id: String,
     pub color: Scalar,
     pixel_coordinates: Vector<Point2f>,
     segments: [[Point2i; 2]; 4],
+    objects_registered: HashSet<Uuid>
 }
 
 impl Zone {
@@ -41,7 +44,8 @@ impl Zone {
             id: id,
             color: color,
             pixel_coordinates: pixel_coordinates,
-            segments: segments
+            segments: segments,
+            objects_registered: HashSet::new()
         }
     }
     pub fn contains_point(&self, x: f32, y: f32) -> bool {
@@ -53,7 +57,7 @@ impl Zone {
             line(img, seg[0], seg[1], self.color, 2, LINE_8, 0).unwrap();
         } 
     }
-    pub fn process_tracker(&self, tracker: &Tracker, min_lifetime_seconds: i64) {
+    pub fn process_tracker(&mut self, tracker: &mut Tracker, min_lifetime_seconds: i64, max_lifetime_seconds: i64) {
         for (object_id, object) in tracker.engine.objects.iter() {
             // Filter objects which disappeared in current time
             if object.get_no_match_times() > 1 {
@@ -66,12 +70,21 @@ impl Zone {
             }
             let object_extra = object_extra.unwrap();
             // Filter objects by min lifetime threshold
-            if object_extra.get_lifetime() <= min_lifetime_seconds {
+            let object_lifetime = object_extra.get_lifetime();
+            if object_lifetime <= min_lifetime_seconds {
                 continue;
             }
             if self.contains_point(center.x, center.y) {
-                todo!("handle");
+                if self.objects_registered.contains(object_id) {
+                    if object_lifetime > max_lifetime_seconds {
+                        tracker.objects_extra.remove(object_id); // Remote object from tracker data to make it appear in next iteration again
+                        self.objects_registered.remove(object_id);
+                    }
+                    continue;
+                }
+                self.objects_registered.insert(*object_id);
             }
         }
+        todo!("handle");
     }
 }
