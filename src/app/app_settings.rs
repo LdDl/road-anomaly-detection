@@ -73,12 +73,20 @@ pub struct TrackingSettings {
     pub delay_seconds: usize,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ZoneSettings {
+    pub id: String,
+    pub geometry: [[i32; 2]; 4],
+    pub color_rgb: Option<[u16; 3]>
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct AppSettings {
     pub input: InputSettings,
     pub output: OutputSettings,
     pub detection: DetectionSettings,
     pub tracking: TrackingSettings,
+    pub zones: Option<Vec<ZoneSettings>>,
 }
 
 impl AppSettings {
@@ -96,6 +104,7 @@ impl AppSettings {
             output: self.output.clone(),
             detection: self.detection.clone(),
             tracking: self.tracking.clone(),
+            zones_settings: self.zones.clone(),
             model_format: mf,
             model_version: mv
         })

@@ -37,8 +37,9 @@ pub struct App {
     pub output: app_settings::OutputSettings,
     pub detection: app_settings::DetectionSettings,
     pub tracking: app_settings::TrackingSettings,
+    pub zones_settings: Option<Vec<app_settings::ZoneSettings>>,
     pub model_format: ModelFormat,
-    pub model_version: ModelVersion
+    pub model_version: ModelVersion,
 }
 
 impl App {
@@ -133,7 +134,15 @@ impl App {
 
         let mut tracker: Tracker = Tracker::new(fps.floor() as usize, 0.3);
         println!("Tracker initialized with following settings:\n\t{}", tracker);
-        
+    
+        let zones: Vec<Zone> = match self.zones_settings.clone() {
+            Some(d) => {
+                d.iter().map(|zone_settings| {
+                    Zone::new(zone_settings.id.clone(), zone_settings.geometry, zone_settings.color_rgb)
+                }).collect()
+            }
+            None => vec![Zone::new("whole_image".to_string(), [[5, 5], [width as i32 - 5, 5], [width as i32 - 5, height as i32 - 5], [5, height as i32 - 5]], Some([0, 0, 255]))]
+        };
         for received in rx_capture {
             let mut frame = received.frame.clone();
             bg_subtractor.apply(&frame, &mut foreground_mask, -1.0).unwrap();
@@ -153,6 +162,9 @@ impl App {
             if self.output.enable {
                 draw_bboxes(&mut frame, &tracker, bbox_scalar, bbox_scalar_inverse);
                 draw_identifiers(&mut frame, &tracker, id_scalar, id_scalar_inverse);
+                for zone in zones.iter() {
+                    zone.draw(&mut frame);
+                }
                 // resize(&frame_background, &mut resized_frame, Size::new(self.output.width, self.output.height), 1.0, 1.0, 1)?;
                 resize(&frame, &mut resized_frame, Size::new(self.output.width, self.output.height), 1.0, 1.0, 1)?;
                 if resized_frame.size()?.width > 0 {

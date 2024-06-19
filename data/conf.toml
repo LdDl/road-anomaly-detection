@@ -39,3 +39,14 @@
 [tracking]
     # Adjust number of seconds to forget event 
     delay_seconds = 30
+
+# Leave [[zones]] empty if you want zone with size of the frame
+[[zones]]
+    id = "zone_1"
+    geometry = [[904, 336], [1401, 297], [1567, 520], [804, 528]]
+    color_rgb = [0, 0, 255]
+
+[[zones]]
+    id = "zone_2"
+    geometry = [[393, 615], [1029, 596], [1189, 912], [255, 1003]]
+    color_rgb = [255, 0, 255]
