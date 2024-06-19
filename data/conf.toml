@@ -39,6 +39,8 @@
 [tracking]
     # Adjust number of seconds to forget event 
     delay_seconds = 30
+    # Adjust number of seconds to consider event is actually exists
+    lifetime_seconds_min = 3
 
 # Leave [[zones]] empty if you want zone with size of the frame
 [[zones]]

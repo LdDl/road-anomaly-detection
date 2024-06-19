@@ -1,5 +1,6 @@
 use crate::tracker::{self, Tracker};
 
+use uuid::Uuid;
 use opencv::{
     core::Mat, core::Point2f, core::Vector, core::Point2i, core::Scalar, imgproc::line, imgproc::put_text,
     imgproc::FONT_HERSHEY_SIMPLEX, imgproc::LINE_8,
@@ -11,7 +12,7 @@ pub struct Zone {
     pub id: String,
     pub color: Scalar,
     pixel_coordinates: Vector<Point2f>,
-    segments: [[Point2i; 2]; 4]
+    segments: [[Point2i; 2]; 4],
 }
 
 impl Zone {
@@ -52,9 +53,22 @@ impl Zone {
             line(img, seg[0], seg[1], self.color, 2, LINE_8, 0).unwrap();
         } 
     }
-    pub fn process_tracker(&self, tracker: &Tracker) {
-        for (objectID, object) in tracker.engine.objects.iter() {
+    pub fn process_tracker(&self, tracker: &Tracker, min_lifetime_seconds: i64) {
+        for (object_id, object) in tracker.engine.objects.iter() {
+            // Filter objects which disappeared in current time
+            if object.get_no_match_times() > 1 {
+                continue;
+            }
             let center = object.get_center();
+            let object_extra = tracker.objects_extra.get(object_id);
+            if object_extra.is_none() {
+                continue;
+            }
+            let object_extra = object_extra.unwrap();
+            // Filter objects by min lifetime threshold
+            if object_extra.get_lifetime() <= min_lifetime_seconds {
+                continue;
+            }
             if self.contains_point(center.x, center.y) {
                 todo!("handle");
             }

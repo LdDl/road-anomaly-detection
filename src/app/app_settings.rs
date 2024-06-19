@@ -71,6 +71,7 @@ impl DetectionSettings {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TrackingSettings {
     pub delay_seconds: usize,
+    pub lifetime_seconds_min: u64,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -113,14 +114,15 @@ impl AppSettings {
 
 impl fmt::Display for AppSettings {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "\tVideo input type: {}\n\tVideo URI: {}\n\tNetwork type: {:?}\n\tNetwork version: {:?}\n\tNetwork weights: {}\n\tNetwork configuration: {:?}\n\tTracker delay seconds: {}",
+        write!(f, "\tVideo input type: {}\n\tVideo URI: {}\n\tNetwork type: {:?}\n\tNetwork version: {:?}\n\tNetwork weights: {}\n\tNetwork configuration: {:?}\n\tTracker delay seconds: {}\n\tTracker min lifetime seconds: {}",
             self.input.video_source_typ,
             self.input.video_source,
             self.detection.network_format,
             self.detection.network_ver,
             self.detection.network_weights,
             self.detection.network_cfg,
-            self.tracking.delay_seconds
+            self.tracking.delay_seconds,
+            self.tracking.lifetime_seconds_min
         )
     }
 }

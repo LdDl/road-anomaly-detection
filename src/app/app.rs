@@ -131,7 +131,8 @@ impl App {
         let target_classes = HashSet::from_iter(self.detection.target_classes.to_owned().unwrap_or(vec![]));
         let net_classes = self.detection.net_classes.to_owned();
         let time_frac = 1.0/fps;
-
+        
+        let lifetime_seconds_min = self.tracking.lifetime_seconds_min as i64;
         let mut tracker: Tracker = Tracker::new(fps.floor() as usize, 0.3);
         println!("Tracker initialized with following settings:\n\t{}", tracker);
     
@@ -160,7 +161,7 @@ impl App {
             tracker.match_objects(&mut tmp_detections, relative_time).unwrap();
             
             for zone in zones.iter() {
-                zone.process_tracker(&tracker)
+                zone.process_tracker(&tracker, lifetime_seconds_min);
             }
             if self.output.enable {
                 draw_bboxes(&mut frame, &tracker, bbox_scalar, bbox_scalar_inverse);
