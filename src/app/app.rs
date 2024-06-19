@@ -126,7 +126,7 @@ impl App {
         let net_classes = self.detection.net_classes.to_owned();
         let time_frac = 1.0/fps;
 
-        let mut tracker: Tracker = Tracker::new(fps.floor() as usize * self.tracking.delay_seconds, 0.3);
+        let mut tracker: Tracker = Tracker::new(fps.floor() as usize, 0.3);
         println!("Tracker initialized with following settings:\n\t{}", tracker);
         for received in rx_capture {
             let mut frame = received.frame.clone();
@@ -144,7 +144,7 @@ impl App {
             let relative_time = received.overall_seconds;
             tracker.match_objects(&mut tmp_detections, relative_time).unwrap();
             if self.output.enable {
-                for object in tmp_detections.blobs.iter() {
+                for (_, object) in tracker.engine.objects.iter() {
                     let bbox = object.get_bbox();
                     let cv_rect = Rect::new(bbox.x.floor() as i32, bbox.y.floor() as i32, bbox.width as i32, bbox.height as i32);
                     match rectangle(&mut frame, cv_rect, color_anomaly_bbox, 2, LINE_4, 0) {
