@@ -3,6 +3,7 @@ use crate::video_capture::ThreadedFrame;
 
 use crate::detection::process_yolo_detections;
 use crate::tracker::Tracker;
+use crate::draw::{invert_color, draw_bboxes, draw_identifiers};
 
 use crate::app::app_settings;
 use crate::app::app_error::AppError;
@@ -114,7 +115,10 @@ impl App {
             resize_window(window, self.output.width, self.output.height)?;
         }
        
-        let color_anomaly_bbox = Scalar::from((0.0, 0.0, 255.0));
+        let bbox_scalar: Scalar = Scalar::from((0.0, 0.0, 255.0));
+        let bbox_scalar_inverse:Scalar = invert_color(&bbox_scalar);
+        let id_scalar: Scalar = Scalar::from((0.0, 0.0, 255.0));
+        let id_scalar_inverse: Scalar = invert_color(&id_scalar);
 
         let mut bg_subtractor = create_background_subtractor_mog2((1.0 * fps).floor() as i32, 16.0, false).unwrap();
         // let mut bg_subtractor = opencv::bgsegm::create_background_subtractor_cnt(15, false, 15*60, true).unwrap();
@@ -144,16 +148,8 @@ impl App {
             let relative_time = received.overall_seconds;
             tracker.match_objects(&mut tmp_detections, relative_time).unwrap();
             if self.output.enable {
-                for (_, object) in tracker.engine.objects.iter() {
-                    let bbox = object.get_bbox();
-                    let cv_rect = Rect::new(bbox.x.floor() as i32, bbox.y.floor() as i32, bbox.width as i32, bbox.height as i32);
-                    match rectangle(&mut frame, cv_rect, color_anomaly_bbox, 2, LINE_4, 0) {
-                        Ok(_) => {},
-                        Err(err) => {
-                            panic!("Can't draw rectangle at blob's bbox due the error: {:?}", err)
-                        }
-                    };
-                }
+                draw_bboxes(&mut frame, &tracker, bbox_scalar, bbox_scalar_inverse);
+                draw_identifiers(&mut frame, &tracker, id_scalar, id_scalar_inverse);
                 // resize(&frame_background, &mut resized_frame, Size::new(self.output.width, self.output.height), 1.0, 1.0, 1)?;
                 resize(&frame, &mut resized_frame, Size::new(self.output.width, self.output.height), 1.0, 1.0, 1)?;
                 if resized_frame.size()?.width > 0 {
