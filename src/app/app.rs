@@ -3,6 +3,7 @@ use crate::video_capture::ThreadedFrame;
 
 use crate::detection::process_yolo_detections;
 use crate::tracker::Tracker;
+use crate::zones::Zone;
 use crate::draw::{invert_color, draw_bboxes, draw_identifiers};
 
 use crate::app::app_settings;
@@ -132,6 +133,7 @@ impl App {
 
         let mut tracker: Tracker = Tracker::new(fps.floor() as usize, 0.3);
         println!("Tracker initialized with following settings:\n\t{}", tracker);
+        
         for received in rx_capture {
             let mut frame = received.frame.clone();
             bg_subtractor.apply(&frame, &mut foreground_mask, -1.0).unwrap();
@@ -147,6 +149,7 @@ impl App {
             let mut tmp_detections = process_yolo_detections(&nms_bboxes, nms_classes_ids, nms_confidences, &net_classes, &target_classes, time_frac);
             let relative_time = received.overall_seconds;
             tracker.match_objects(&mut tmp_detections, relative_time).unwrap();
+            
             if self.output.enable {
                 draw_bboxes(&mut frame, &tracker, bbox_scalar, bbox_scalar_inverse);
                 draw_identifiers(&mut frame, &tracker, id_scalar, id_scalar_inverse);
