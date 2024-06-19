@@ -70,6 +70,12 @@ impl Tracker {
                 }
             }
         }
+        // Remove obsolete objects
+        let ref_engine_objects = &self.engine.objects;
+        self.objects_extra.retain(|object_id, _| {
+            let save = ref_engine_objects.contains_key(object_id);
+            save
+        });
         Ok(())
     }
 }
