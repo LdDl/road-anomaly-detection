@@ -1,9 +1,9 @@
-use crate::video_capture;
+use crate::{video_capture};
 use crate::video_capture::ThreadedFrame;
 
 use crate::detection::process_yolo_detections;
 use crate::tracker::Tracker;
-use crate::zones::Zone;
+use crate::zones::{Zone, EventInfo};
 use crate::draw::{invert_color, draw_bboxes, draw_identifiers};
 
 use crate::app::app_settings;
@@ -33,6 +33,7 @@ use od_opencv::{
 };
 
 pub struct App {
+    pub application_info: app_settings::ApplicationInfo,
     pub input: app_settings::InputSettings,
     pub output: app_settings::OutputSettings,
     pub detection: app_settings::DetectionSettings,
@@ -136,7 +137,9 @@ impl App {
         let lifetime_seconds_max = self.tracking.lifetime_seconds_max as i64;
         let mut tracker: Tracker = Tracker::new(fps.floor() as usize, 0.3);
         println!("Tracker initialized with following settings:\n\t{}", tracker);
-    
+   
+        let app_name = self.application_info.id.to_owned();
+
         let mut zones: Vec<Zone> = match self.zones_settings.clone() {
             Some(d) => {
                 d.iter().map(|zone_settings| {
@@ -145,6 +148,10 @@ impl App {
             }
             None => vec![Zone::new("whole_image".to_string(), [[5, 5], [width as i32 - 5, 5], [width as i32 - 5, height as i32 - 5], [5, height as i32 - 5]], Some([0, 0, 255]))]
         };
+        let (events_sender, events_reciever): (mpsc::SyncSender<EventInfo>, mpsc::Receiver<EventInfo>) = mpsc::sync_channel(0);
+        thread::spawn(move || {
+            events_processing(events_reciever);
+        });
         for received in rx_capture {
             let mut frame = received.frame.clone();
             bg_subtractor.apply(&frame, &mut foreground_mask, -1.0).unwrap();
@@ -162,7 +169,16 @@ impl App {
             tracker.match_objects(&mut tmp_detections, relative_time).unwrap();
             
             for zone in zones.iter_mut() {
-                let registered_events = zone.process_tracker(&mut tracker, lifetime_seconds_min, lifetime_seconds_max, Some("eq_id".to_string()), Some(&frame));
+                let registered_events = zone.process_tracker(&mut tracker, lifetime_seconds_min, lifetime_seconds_max, Some(app_name.clone()), Some(&frame));
+                for new_event in registered_events {
+                    match events_sender.send(new_event) {
+                        Ok(_)=>{ },
+                        Err(_err) => {
+                            // Closed channel?
+                            println!("Error on send event to postprocess thread: {}", _err)
+                        }
+                    };
+                }
             }
             if self.output.enable {
                 draw_bboxes(&mut frame, &tracker, bbox_scalar, bbox_scalar_inverse);
@@ -181,10 +197,10 @@ impl App {
                 }
             }
         }
+
         Ok(())
     }
 }
-
 
 fn probe_video(capture: &VideoCapture) ->  Result<(f32, f32, f32), AppError> {
     let fps = capture.get(opencv::videoio::CAP_PROP_FPS)? as f32;
@@ -232,3 +248,8 @@ fn prepare_neural_net(mf: ModelFormat, mv: ModelVersion, weights: &str, configur
     Ok(neural_net)
 }
 
+fn events_processing(events_reciever: mpsc::Receiver<EventInfo>) {
+    for event_income in events_reciever {
+        todo!("Implement reciever for events")
+    }
+}

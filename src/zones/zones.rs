@@ -35,6 +35,7 @@ pub struct EventPOI {
 pub struct EventInfo {
     id: Uuid,
     event_registered_at: i64,
+    event_image: Option<Mat>,
     object_id: Uuid,
     object_registered_at: i64,
     object_lifetime: i64,
@@ -83,7 +84,7 @@ impl Zone {
             line(img, seg[0], seg[1], self.color, 2, LINE_8, 0).unwrap();
         } 
     }
-    pub fn process_tracker(&mut self, tracker: &mut Tracker, min_lifetime_seconds: i64, max_lifetime_seconds: i64, equipment_id: Option<String>, crop_photo: Option<&Mat>) -> Vec<EventInfo> {
+    pub fn process_tracker(&mut self, tracker: &mut Tracker, min_lifetime_seconds: i64, max_lifetime_seconds: i64, app_id: Option<String>, frame: Option<&Mat>) -> Vec<EventInfo> {
         let mut new_events: Vec<EventInfo> = vec![];
         let current_ut = Utc::now().timestamp();
         for (object_id, object) in tracker.engine.objects.iter() {
@@ -117,6 +118,8 @@ impl Zone {
                 new_events.push(EventInfo{
                     id: Uuid::new_v4(),
                     event_registered_at: current_ut,
+                    // event_image: frame.map(|img| img.clone()),
+                    event_image: frame.cloned(),
                     object_id: *object_id,
                     object_registered_at: object_extra.get_register_time(),
                     object_lifetime,
@@ -131,7 +134,7 @@ impl Zone {
                         y: center.y.floor() as i32
                     },
                     zone_id: self.id.clone(),
-                    equipment_id: equipment_id.clone()
+                    equipment_id: app_id.clone()
                 })
             }
         }

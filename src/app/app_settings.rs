@@ -82,8 +82,14 @@ pub struct ZoneSettings {
     pub color_rgb: Option<[u16; 3]>
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ApplicationInfo {
+    pub id: String,
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct AppSettings {
+    pub application_info: ApplicationInfo,
     pub input: InputSettings,
     pub output: OutputSettings,
     pub detection: DetectionSettings,
@@ -105,6 +111,7 @@ impl AppSettings {
             return Err(AppError::from(AppInternalError{typ: 5, txt: format!("Incorrect lifetimes. Min: {}, Max: {}", self.tracking.lifetime_seconds_min, self.tracking.lifetime_seconds_max)}));
         }
         Ok(App {
+            application_info: self.application_info.clone(),
             input: self.input.clone(),
             output: self.output.clone(),
             detection: self.detection.clone(),
@@ -118,7 +125,8 @@ impl AppSettings {
 
 impl fmt::Display for AppSettings {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "\tVideo input type: {}\n\tVideo URI: {}\n\tNetwork type: {:?}\n\tNetwork version: {:?}\n\tNetwork weights: {}\n\tNetwork configuration: {:?}\n\tTracker delay seconds: {}\n\tTracker min lifetime seconds: {}",
+        write!(f, "\tApplication name: {}\n\tVideo input type: {}\n\tVideo URI: {}\n\tNetwork type: {:?}\n\tNetwork version: {:?}\n\tNetwork weights: {}\n\tNetwork configuration: {:?}\n\tTracker delay seconds: {}\n\tTracker min lifetime seconds: {}",
+            self.application_info.id,
             self.input.video_source_typ,
             self.input.video_source,
             self.detection.network_format,

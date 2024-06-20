@@ -1,3 +1,7 @@
+[application_info]
+    # Just field for future identification of application. Could be any string.
+    id = "My-fancy-road-anomaly-detection-software"
+
 [input]
     # Source URL of video: https://www.youtube.com/watch?v=KBsqQez-O4w
     video_src = "./data/tests/test1.mp4"
