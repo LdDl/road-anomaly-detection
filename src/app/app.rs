@@ -1,10 +1,11 @@
-use crate::{video_capture};
+use crate::{publisher::{PublisherTrait}, video_capture};
 use crate::video_capture::ThreadedFrame;
 
 use crate::detection::process_yolo_detections;
 use crate::tracker::Tracker;
 use crate::zones::{Zone};
 use crate::events::EventInfo;
+use crate::publisher::redis_publisher::RedisConnection;
 use crate::draw::{invert_color, draw_bboxes, draw_identifiers};
 
 use crate::app::app_settings;
@@ -40,6 +41,7 @@ pub struct App {
     pub detection: app_settings::DetectionSettings,
     pub tracking: app_settings::TrackingSettings,
     pub zones_settings: Option<Vec<app_settings::ZoneSettings>>,
+    pub publishers: Option<app_settings::PublishersSettings>,
     pub model_format: ModelFormat,
     pub model_version: ModelVersion,
 }
@@ -149,10 +151,31 @@ impl App {
             }
             None => vec![Zone::new("whole_image".to_string(), [[5, 5], [width as i32 - 5, 5], [width as i32 - 5, height as i32 - 5], [5, height as i32 - 5]], Some([0, 0, 255]))]
         };
+        
+        // Init publishers
         let (events_sender, events_reciever): (mpsc::SyncSender<EventInfo>, mpsc::Receiver<EventInfo>) = mpsc::sync_channel(0);
+        let publishers_settings = self.publishers.to_owned();
         thread::spawn(move || {
-            events_processing(events_reciever);
+            let mut publishers: Vec<Box<dyn PublisherTrait>> = vec![];
+            match publishers_settings {
+                Some(ps) => {
+                    match ps.redis {
+                        Some(redis_settings) => {
+                            let redis_conn = if redis_settings.password.is_empty() {
+                                RedisConnection::new(redis_settings.host, redis_settings.port, redis_settings.db_index, redis_settings.channel_name)
+                            } else {
+                                RedisConnection::new_with_password(redis_settings.host, redis_settings.port, redis_settings.db_index, redis_settings.channel_name, redis_settings.password)
+                            };
+                            publishers.push(redis_conn);
+                        },
+                        None => {}
+                    }
+                },
+                None => {}
+            }
+            events_processing(events_reciever, publishers);
         });
+
         for received in rx_capture {
             let mut frame = received.frame.clone();
             bg_subtractor.apply(&frame, &mut foreground_mask, -1.0).unwrap();
@@ -249,8 +272,15 @@ fn prepare_neural_net(mf: ModelFormat, mv: ModelVersion, weights: &str, configur
     Ok(neural_net)
 }
 
-fn events_processing(events_reciever: mpsc::Receiver<EventInfo>) {
+fn events_processing(events_reciever: mpsc::Receiver<EventInfo>, publishers: Vec<Box<dyn PublisherTrait>>) {
     for event_income in events_reciever {
-        todo!("Implement reciever for events")
+        for publisher in publishers.iter() {
+            match publisher.publish(&event_income) {
+                Ok(_) => {},
+                Err(err) => {
+                    println!("Error during publishing message: {:#?}", err);
+                }
+            };
+        }
     }
 }

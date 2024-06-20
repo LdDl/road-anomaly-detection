@@ -5,6 +5,11 @@ use std::fs;
 use std::fmt;
 use od_opencv::model_format::{ModelFormat, ModelVersion};
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ApplicationInfo {
+    pub id: String,
+}
+
 #[derive(Serialize, Deserialize, Clone)]
 pub struct InputSettings {
     #[serde(rename = "video_src")]
@@ -83,8 +88,18 @@ pub struct ZoneSettings {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ApplicationInfo {
-    pub id: String,
+pub struct PublishersSettings {
+    pub redis: Option<RedisPublisherSettings>
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct RedisPublisherSettings {
+    pub enable: bool,
+    pub host: String,
+    pub port: i32,
+    pub password: String,
+    pub db_index: i32,
+    pub channel_name: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -95,6 +110,7 @@ pub struct AppSettings {
     pub detection: DetectionSettings,
     pub tracking: TrackingSettings,
     pub zones: Option<Vec<ZoneSettings>>,
+    pub publishers: Option<PublishersSettings>,
 }
 
 impl AppSettings {
@@ -117,6 +133,7 @@ impl AppSettings {
             detection: self.detection.clone(),
             tracking: self.tracking.clone(),
             zones_settings: self.zones.clone(),
+            publishers: self.publishers.clone(),
             model_format: mf,
             model_version: mv
         })
