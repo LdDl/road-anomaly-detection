@@ -5,3 +5,4 @@ pub mod tracker;
 pub mod events;
 pub mod zones;
 pub mod draw;
+pub mod publisher;

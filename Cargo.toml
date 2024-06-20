@@ -18,3 +18,4 @@ opencv = { version = "0.91.3" }
 od_opencv = "0.1.6"
 mot-rs = "0.1.1"
 uuid = { version = "1.8.0", features = ["serde", "v4"] }
+redis = { version = "0.25.4" }
