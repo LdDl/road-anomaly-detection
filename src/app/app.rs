@@ -162,7 +162,7 @@ impl App {
             tracker.match_objects(&mut tmp_detections, relative_time).unwrap();
             
             for zone in zones.iter_mut() {
-                zone.process_tracker(&mut tracker, lifetime_seconds_min, lifetime_seconds_max);
+                let registered_events = zone.process_tracker(&mut tracker, lifetime_seconds_min, lifetime_seconds_max, Some("eq_id".to_string()), Some(&frame));
             }
             if self.output.enable {
                 draw_bboxes(&mut frame, &tracker, bbox_scalar, bbox_scalar_inverse);

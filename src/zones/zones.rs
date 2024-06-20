@@ -1,10 +1,9 @@
 use crate::tracker::{Tracker};
 
 use uuid::Uuid;
+use chrono::Utc;
 use opencv::{
-    core::Mat, core::Point2f, core::Vector, core::Point2i, core::Scalar, imgproc::line, imgproc::put_text,
-    imgproc::FONT_HERSHEY_SIMPLEX, imgproc::LINE_8,
-    imgproc::point_polygon_test,
+    core::Mat, core::Point2f, core::Point2i, core::Scalar, core::Vector, imgproc::line, imgproc::point_polygon_test, imgproc::LINE_8
 };
 
 use std::collections::HashSet;
@@ -16,6 +15,33 @@ pub struct Zone {
     pixel_coordinates: Vector<Point2f>,
     segments: [[Point2i; 2]; 4],
     objects_registered: HashSet<Uuid>
+}
+
+#[derive(Debug)]
+pub struct EventBBox {
+    pub x: i32,
+    pub y: i32,
+    pub width: i32,
+    pub height: i32
+}
+
+#[derive(Debug)]
+pub struct EventPOI {
+    pub x: i32,
+    pub y: i32,
+}
+
+#[derive(Debug)]
+pub struct EventInfo {
+    id: Uuid,
+    event_registered_at: i64,
+    object_id: Uuid,
+    object_registered_at: i64,
+    object_lifetime: i64,
+    object_bbox: EventBBox,
+    object_poi: EventPOI,
+    zone_id: String,
+    equipment_id: Option<String>
 }
 
 impl Zone {
@@ -41,10 +67,10 @@ impl Zone {
             None => Scalar::from((0., 0., 0.))
         };
         Zone{
-            id: id,
-            color: color,
-            pixel_coordinates: pixel_coordinates,
-            segments: segments,
+            id,
+            color,
+            pixel_coordinates,
+            segments,
             objects_registered: HashSet::new()
         }
     }
@@ -57,7 +83,9 @@ impl Zone {
             line(img, seg[0], seg[1], self.color, 2, LINE_8, 0).unwrap();
         } 
     }
-    pub fn process_tracker(&mut self, tracker: &mut Tracker, min_lifetime_seconds: i64, max_lifetime_seconds: i64) {
+    pub fn process_tracker(&mut self, tracker: &mut Tracker, min_lifetime_seconds: i64, max_lifetime_seconds: i64, equipment_id: Option<String>, crop_photo: Option<&Mat>) -> Vec<EventInfo> {
+        let mut new_events: Vec<EventInfo> = vec![];
+        let current_ut = Utc::now().timestamp();
         for (object_id, object) in tracker.engine.objects.iter() {
             // Filter objects which disappeared in current time
             if object.get_no_match_times() > 1 {
@@ -77,14 +105,36 @@ impl Zone {
             if self.contains_point(center.x, center.y) {
                 if self.objects_registered.contains(object_id) {
                     if object_lifetime > max_lifetime_seconds {
-                        tracker.objects_extra.remove(object_id); // Remote object from tracker data to make it appear in next iteration again
+                        tracker.objects_extra.remove(object_id); // Remove object from tracker data to make it appear in next iteration again if object still exist
                         self.objects_registered.remove(object_id);
                     }
                     continue;
                 }
                 self.objects_registered.insert(*object_id);
+                // Prepare event_info
+                let bbox = object.get_bbox();
+                let center = object.get_center();
+                new_events.push(EventInfo{
+                    id: Uuid::new_v4(),
+                    event_registered_at: current_ut,
+                    object_id: *object_id,
+                    object_registered_at: object_extra.get_register_time(),
+                    object_lifetime,
+                    object_bbox: EventBBox{
+                        x: bbox.x.floor() as i32,
+                        y: bbox.y.floor() as i32,
+                        width: bbox.width.floor() as i32,
+                        height: bbox.height.floor() as i32
+                    },
+                    object_poi: EventPOI{
+                        x: center.x.floor() as i32,
+                        y: center.y.floor() as i32
+                    },
+                    zone_id: self.id.clone(),
+                    equipment_id: equipment_id.clone()
+                })
             }
         }
-        todo!("handle");
+        new_events
     }
 }

@@ -30,6 +30,9 @@ impl ObjectExtra {
     pub fn get_lifetime(&self) -> i64 {
         (self.updated_unix_tm - self.register_unix_tm).abs()
     }
+    pub fn get_register_time(&self) -> i64 {
+        self.register_unix_tm
+    }
 }
 
 pub struct Tracker {
