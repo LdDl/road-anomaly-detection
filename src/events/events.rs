@@ -1,0 +1,50 @@
+use uuid::Uuid;
+use opencv::{
+    core::Mat 
+};
+
+#[derive(Debug)]
+pub struct EventBBox {
+    pub x: i32,
+    pub y: i32,
+    pub width: i32,
+    pub height: i32
+}
+
+#[derive(Debug)]
+pub struct EventPOI {
+    pub x: i32,
+    pub y: i32,
+}
+
+#[derive(Debug)]
+pub struct EventInfo {
+    id: Uuid,
+    event_registered_at: i64,
+    event_image: Option<Mat>,
+    object_id: String,
+    object_registered_at: i64,
+    object_lifetime: i64,
+    object_bbox: EventBBox,
+    object_poi: EventPOI,
+    zone_id: String,
+    equipment_id: Option<String>
+}
+
+impl EventInfo{
+    pub fn new(unix_tm: i64, frame: Option<&Mat>, object_id: String, object_registered_unix_tm: i64, object_lifetime: i64, object_bbox: EventBBox, object_poi: EventPOI, zone_id: String, equipment_id: Option<String>) -> Self {
+        EventInfo{
+            id: Uuid::new_v4(),
+            event_registered_at: unix_tm,
+            // event_image: frame.map(|img| img.clone()),
+            event_image: frame.cloned(),
+            object_id,
+            object_registered_at: object_registered_unix_tm,
+            object_lifetime,
+            object_bbox, 
+            object_poi,
+            zone_id,
+            equipment_id 
+        }
+    }
+}

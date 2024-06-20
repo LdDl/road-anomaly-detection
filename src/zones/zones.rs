@@ -1,4 +1,5 @@
 use crate::tracker::{Tracker};
+use crate::events::{EventInfo, EventBBox, EventPOI};
 
 use uuid::Uuid;
 use chrono::Utc;
@@ -15,34 +16,6 @@ pub struct Zone {
     pixel_coordinates: Vector<Point2f>,
     segments: [[Point2i; 2]; 4],
     objects_registered: HashSet<Uuid>
-}
-
-#[derive(Debug)]
-pub struct EventBBox {
-    pub x: i32,
-    pub y: i32,
-    pub width: i32,
-    pub height: i32
-}
-
-#[derive(Debug)]
-pub struct EventPOI {
-    pub x: i32,
-    pub y: i32,
-}
-
-#[derive(Debug)]
-pub struct EventInfo {
-    id: Uuid,
-    event_registered_at: i64,
-    event_image: Option<Mat>,
-    object_id: Uuid,
-    object_registered_at: i64,
-    object_lifetime: i64,
-    object_bbox: EventBBox,
-    object_poi: EventPOI,
-    zone_id: String,
-    equipment_id: Option<String>
 }
 
 impl Zone {
@@ -115,27 +88,26 @@ impl Zone {
                 // Prepare event_info
                 let bbox = object.get_bbox();
                 let center = object.get_center();
-                new_events.push(EventInfo{
-                    id: Uuid::new_v4(),
-                    event_registered_at: current_ut,
-                    // event_image: frame.map(|img| img.clone()),
-                    event_image: frame.cloned(),
-                    object_id: *object_id,
-                    object_registered_at: object_extra.get_register_time(),
+                let new_event = EventInfo::new(
+                    current_ut,
+                    frame,
+                    object_id.to_string(),
+                    object_extra.get_register_time(),
                     object_lifetime,
-                    object_bbox: EventBBox{
+                    EventBBox{
                         x: bbox.x.floor() as i32,
                         y: bbox.y.floor() as i32,
                         width: bbox.width.floor() as i32,
                         height: bbox.height.floor() as i32
                     },
-                    object_poi: EventPOI{
+                    EventPOI{
                         x: center.x.floor() as i32,
                         y: center.y.floor() as i32
                     },
-                    zone_id: self.id.clone(),
-                    equipment_id: app_id.clone()
-                })
+                    self.id.clone(),
+                    app_id.clone(),
+                );
+                new_events.push(new_event);
             }
         }
         new_events

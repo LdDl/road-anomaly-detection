@@ -3,7 +3,8 @@ use crate::video_capture::ThreadedFrame;
 
 use crate::detection::process_yolo_detections;
 use crate::tracker::Tracker;
-use crate::zones::{Zone, EventInfo};
+use crate::zones::{Zone};
+use crate::events::EventInfo;
 use crate::draw::{invert_color, draw_bboxes, draw_identifiers};
 
 use crate::app::app_settings;
