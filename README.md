@@ -30,6 +30,9 @@ Diagram is prepared via https://app.diagrams.net/. Source is [here](docs/anomaly
 @w.i.p.
 
 ## Installation and usage
+
+**Important notice**: it has been tested on Ubuntu 22.04.3 LTS only!
+
 It is needed to compile it via Rust programming language compiler (here is docs: https://www.rust-lang.org/learn/get-started) currently. If further I'll make a Dockerfile for CPU atleast and may be for GPU/CUDA.
 
 Compilation from source code:
@@ -42,6 +45,12 @@ cargo build --release
 Prepare neural network for detecting anomaly events.
 
 Prepare configuration file. Example could be found here - [data/conf.toml](data/conf.toml). In my example I use YOLOv8 trained on just two classes: "moderate_accident", "severe_accident".
+
+Run:
+```
+export ROAD_ANOMALY_CONFIG=$(pwd)/data/conf.toml
+./target/release/road-anomaly-detector $ROAD_ANOMALY_CONFIG
+```
 
 ## Future works
 * Make REST API to extract and to mutate configuration;
