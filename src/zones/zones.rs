@@ -104,6 +104,8 @@ impl Zone {
                         x: center.x.floor() as i32,
                         y: center.y.floor() as i32
                     },
+                    object_extra.get_classname(),
+                    object_extra.get_confidence(),
                     self.id.clone(),
                     app_id.clone(),
                 );

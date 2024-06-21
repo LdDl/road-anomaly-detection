@@ -29,12 +29,14 @@ pub struct EventInfo {
     object_lifetime: i64,
     object_bbox: EventBBox,
     object_poi: EventPOI,
+    object_classname: String,
+    object_confidence: f32,
     zone_id: String,
     equipment_id: Option<String>
 }
 
 impl EventInfo{
-    pub fn new(unix_tm: i64, frame: Option<&Mat>, object_id: String, object_registered_unix_tm: i64, object_lifetime: i64, object_bbox: EventBBox, object_poi: EventPOI, zone_id: String, equipment_id: Option<String>) -> Self {
+    pub fn new(unix_tm: i64, frame: Option<&Mat>, object_id: String, object_registered_unix_tm: i64, object_lifetime: i64, object_bbox: EventBBox, object_poi: EventPOI, classname: String, confidence: f32, zone_id: String, equipment_id: Option<String>) -> Self {
         EventInfo{
             id: Uuid::new_v4(),
             event_registered_at: unix_tm,
@@ -45,6 +47,8 @@ impl EventInfo{
             object_lifetime,
             object_bbox, 
             object_poi,
+            object_classname: classname,
+            object_confidence: confidence,
             zone_id,
             equipment_id 
         }

@@ -25,6 +25,9 @@ impl ObjectExtra {
     pub fn get_classname(&self) -> String {
         self.class_name.clone()
     }
+    pub fn get_confidence(&self) -> f32 {
+        self.confidence
+    }
     pub fn get_lifetime(&self) -> i64 {
         (self.updated_unix_tm - self.register_unix_tm).abs()
     }
