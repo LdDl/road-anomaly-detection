@@ -256,7 +256,7 @@ fn prepare_neural_net(mf: ModelFormat, mv: ModelVersion, weights: &str, configur
     // Hacky way to convert Option<String> to Option<&str>
     let configuration_str = configuration.as_deref();
 
-    let neural_net = match new_from_file(
+    let neural_net = new_from_file(
         weights,
         configuration_str,
         (net_size.0, net_size.1),
@@ -264,12 +264,7 @@ fn prepare_neural_net(mf: ModelFormat, mv: ModelVersion, weights: &str, configur
         if cuda_available { DNN_BACKEND_CUDA } else { DNN_BACKEND_OPENCV },
         if cuda_available { DNN_TARGET_CUDA } else { DNN_TARGET_CPU },
         vec![]
-    ) {
-        Ok(result) => result,
-        Err(err) => {
-            panic!("Can't read network '{}' (with cfg '{:?}') due the error: {:?}", weights, configuration, err);
-        }
-    };
+    )?;
     Ok(neural_net)
 }
 

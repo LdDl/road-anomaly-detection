@@ -33,7 +33,7 @@ pub fn draw_bboxes(img: &mut Mat, tracker: &Tracker, color: Scalar, inv_color: S
         match rectangle(img, cv_rect, color_choose, 2, LINE_4, 0) {
             Ok(_) => {},
             Err(err) => {
-                panic!("Can't draw rectangle at blob's bbox due the error: {:?}", err)
+                eprintln!("Can't draw rectangle at blob's bbox due the error: {:?}", err)
             }
         };
     }
@@ -50,7 +50,7 @@ pub fn draw_identifiers(img: &mut Mat, tracker: &Tracker, color: Scalar, inv_col
         match put_text(img, &object.get_id().to_string(), anchor, FONT_HERSHEY_SIMPLEX, 0.5, color_choose, 2, LINE_8, false) {
             Ok(_) => {},
             Err(err) => {
-                println!("Can't display ID of object due the error {:?}", err);
+                eprintln!("Can't display ID of object due the error {:?}", err);
             }
         };
     }
