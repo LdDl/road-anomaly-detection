@@ -1,11 +1,5 @@
 
-use opencv::{
-    prelude::*,
-    core::Mat,
-    core::Vector,
-    core::Rect as RectCV,
-    dnn::nms_boxes
-};
+use opencv::core::Rect as RectCV;
 
 use mot_rs::mot::SimpleBlob;
 use mot_rs::utils::{
@@ -21,7 +15,7 @@ pub struct Detections {
     pub confidences: Vec<f32>,
 }
 
-pub fn process_yolo_detections(nms_bboxes: &Vec<RectCV>, nms_classes_ids: Vec<usize>, nms_confidences: Vec<f32>, net_classes: &Vec<String>, target_classes: &HashSet<String>, dt: f32) -> Detections {
+pub fn process_yolo_detections(nms_bboxes: &[RectCV], nms_classes_ids: Vec<usize>, nms_confidences: Vec<f32>, net_classes: &[String], target_classes: &HashSet<String>, dt: f32) -> Detections {
     if (nms_bboxes.len() != nms_classes_ids.len()) || (nms_bboxes.len() != nms_confidences.len()) || (nms_classes_ids.len() != nms_confidences.len()) {
         // Something wrong?
         println!("BBoxes len: {}, Classed IDs len: {}, Confidences len: {}", nms_bboxes.len(), nms_classes_ids.len(), nms_confidences.len());
@@ -40,19 +34,19 @@ pub fn process_yolo_detections(nms_bboxes: &Vec<RectCV>, nms_classes_ids: Vec<us
             continue
         };
         let classname = net_classes[class_id].clone();
-        if target_classes.len() > 0 && !target_classes.contains(&classname) {
+        if !target_classes.is_empty() && !target_classes.contains(&classname) {
             continue;
         }
         class_names.push(classname);
-        let center_x = (bbox.x as f32 + bbox.width as f32 / 2.0);
-        let center_y = (bbox.y as f32 + bbox.height as f32 / 2.0);
+        let center_x = bbox.x as f32 + bbox.width as f32 / 2.0;
+        let center_y = bbox.y as f32 + bbox.height as f32 / 2.0;
         let kb: SimpleBlob = SimpleBlob::new_with_center_dt(Point::new(center_x, center_y), Rect::new(bbox.x as f32, bbox.y as f32, bbox.width as f32, bbox.height as f32), dt);
         // let mut kb = SimpleBlob::new_with_dt(Rect::new(bbox.x as f32, bbox.y as f32, bbox.width as f32, bbox.height as f32), dt);
         aggregated_data.push(kb);
     }
-    return Detections {
+    Detections {
         blobs: aggregated_data,
-        class_names: class_names,
+        class_names,
         confidences: nms_confidences,
     }
 }

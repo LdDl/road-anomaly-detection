@@ -1,3 +1,3 @@
 mod draw;
 
-pub use self::{draw::*};
+pub use self::draw::*;

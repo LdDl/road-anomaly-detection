@@ -1,9 +1,9 @@
-use crate::{publisher::{PublisherTrait}, video_capture};
+use crate::{publisher::PublisherTrait, video_capture};
 use crate::video_capture::ThreadedFrame;
 
 use crate::detection::process_yolo_detections;
 use crate::tracker::Tracker;
-use crate::zones::{Zone};
+use crate::zones::Zone;
 use crate::events::EventInfo;
 use crate::publisher::redis_publisher::RedisConnection;
 use crate::draw::{invert_color, draw_bboxes, draw_identifiers};
@@ -13,16 +13,14 @@ use crate::app::app_error::AppError;
 use crate::app::app_error::AppInternalError;
 
 use opencv::{
-    core::Mat, core::{Size, Rect, Scalar, get_cuda_enabled_device_count}, highgui::imshow, highgui::named_window, highgui::resize_window, highgui::wait_key, imgproc::resize, prelude::MatTraitConst, prelude::VideoCaptureTrait, prelude::VideoCaptureTraitConst, video::{create_background_subtractor_mog2, BackgroundSubtractorMOG2Trait, BackgroundSubtractorTraitConst}, videoio::VideoCapture,
+    core::Mat, core::{Size, Scalar, get_cuda_enabled_device_count}, highgui::imshow, highgui::named_window, highgui::resize_window, highgui::wait_key, imgproc::resize, prelude::MatTraitConst, prelude::VideoCaptureTrait, prelude::VideoCaptureTraitConst, video::{create_background_subtractor_mog2, BackgroundSubtractorMOG2Trait, BackgroundSubtractorTraitConst}, videoio::VideoCapture,
     dnn::DNN_BACKEND_CUDA,
     dnn::DNN_TARGET_CUDA,
     dnn::DNN_BACKEND_OPENCV,
     dnn::DNN_TARGET_CPU,
-    imgproc::LINE_4,
-    imgproc::rectangle,
 };
 
-use std::{thread};
+use std::thread;
 use std::sync::mpsc;
 use std::collections::HashSet;
 const EMPTY_FRAMES_LIMIT: u16 = 60;
@@ -92,7 +90,7 @@ impl App {
                 }
                 let frame = ThreadedFrame{
                     frame: read_frame,
-                    overall_seconds: overall_seconds,
+                    overall_seconds,
                     current_second: second_fraction,
                 };
                 match tx_capture.send(frame) {

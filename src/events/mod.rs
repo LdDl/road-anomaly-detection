@@ -1,3 +1,3 @@
 pub mod events;
 
-pub use self::{events::*};
+pub use self::events::*;

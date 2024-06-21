@@ -1,10 +1,8 @@
 use crate::utils::serialize_mat_as_base64;
 
-use serde::{Serialize};
+use serde::Serialize;
 use uuid::Uuid;
-use opencv::{
-    core::Mat 
-};
+use opencv::core::Mat;
 
 #[derive(Debug, Serialize)]
 pub struct EventBBox {
@@ -52,6 +50,6 @@ impl EventInfo{
         }
     }
     pub fn get_id(&self) -> Uuid {
-        self.id.clone()
+        self.id
     }
 }

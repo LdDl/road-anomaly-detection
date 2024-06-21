@@ -7,7 +7,7 @@ use opencv::{
 };
 
 #[derive(Debug)]
-struct VideoCaptureInternalError{typ: i16}
+pub struct VideoCaptureInternalError{typ: i16, pub txt: String}
 impl fmt::Display for VideoCaptureInternalError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.typ {
@@ -57,10 +57,7 @@ pub fn get_video_capture(video_src: &str, typ: String) -> Result<VideoCapture, V
     let device_id = match video_src.parse::<i32>() {
         Ok(result) => {result},
         Err(err) => {
-            return Err(VideoCaptureError::VideoError(VideoCaptureInternalError{typ: 1}))
-        }
-        Err(err) => {
-            panic!("Can't parse '{}' as device_id (i32) due the error: {:?}", video_src, err);
+            return Err(VideoCaptureError::VideoError(VideoCaptureInternalError{typ: 1, txt: format!("Bad device id: '{}'. Err: {}", video_src, err)}))
         }
     };
     let video_capture = match VideoCapture::new(device_id, CAP_ANY) {
@@ -69,5 +66,5 @@ pub fn get_video_capture(video_src: &str, typ: String) -> Result<VideoCapture, V
             return Err(VideoCaptureError::OpenCVError(err))
         }
     };
-    return Ok(video_capture);
+    Ok(video_capture)
 }

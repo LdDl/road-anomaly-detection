@@ -1,4 +1,4 @@
-use serde::{Serializer};
+use serde::Serializer;
 use opencv::{
     core::Mat,
     core::Vector,

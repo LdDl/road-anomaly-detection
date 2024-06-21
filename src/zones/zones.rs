@@ -1,4 +1,4 @@
-use crate::tracker::{Tracker};
+use crate::tracker::Tracker;
 use crate::events::{EventInfo, EventBBox, EventPOI};
 
 use uuid::Uuid;

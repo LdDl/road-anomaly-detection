@@ -1,12 +1,5 @@
 // Copy of https://github.com/LdDl/rust-road-traffic/blob/master/src/video_capture/frame.rs
-use opencv::{
-    core::Mat,
-};
-
-use chrono::{
-    DateTime,
-    Utc
-};
+use opencv::core::Mat;
 
 pub struct ThreadedFrame {
     pub frame: Mat,

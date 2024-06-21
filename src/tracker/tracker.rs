@@ -2,9 +2,7 @@ use crate::detection::Detections;
 
 use uuid::Uuid;
 use chrono::Utc;
-use mot_rs::mot::{
-    IoUTracker
-};
+use mot_rs::mot::IoUTracker;
 
 use std::error::Error;
 use std::collections::HashMap;
@@ -79,8 +77,7 @@ impl Tracker {
         // Remove obsolete objects
         let ref_engine_objects = &self.engine.objects;
         self.objects_extra.retain(|object_id, _| {
-            let save = ref_engine_objects.contains_key(object_id);
-            save
+            ref_engine_objects.contains_key(object_id)
         });
         Ok(())
     }

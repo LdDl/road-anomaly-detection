@@ -1,12 +1,10 @@
 use std::fmt;
 
 #[derive(Debug)]
-struct TrackerInternalError{typ: i16}
+struct TrackerInternalError;
 impl fmt::Display for TrackerInternalError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self.typ {
-            _ => write!(f, "Undefined Tracker error")
-        }
+        write!(f, "Undefined Tracker error")
     }
 }
 

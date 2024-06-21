@@ -1,3 +1,3 @@
 mod detection;
 
-pub use self::{detection::*};
+pub use self::detection::*;
