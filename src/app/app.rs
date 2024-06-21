@@ -106,7 +106,7 @@ impl App {
                     println!("Video capture has been closed successfully");
                 },
                 Err(err) => {
-                    println!("Can't release video capturer due the error: {}", err);
+                    eprintln!("Can't release video capturer due the error: {}", err);
                 }
             };
         });
@@ -185,7 +185,7 @@ impl App {
             let (nms_bboxes, nms_classes_ids, nms_confidences) = match neural_net.forward(&frame_background, conf_threshold, nms_threshold) {
                 Ok((a, b, c)) => { (a, b, c) },
                 Err(err) => {
-                    println!("Can't process input of neural network due the error {:?}", err);
+                    eprintln!("Can't process input of neural network due the error {:?}", err);
                     break;
                 }
             };
@@ -200,7 +200,7 @@ impl App {
                         Ok(_)=>{ },
                         Err(_err) => {
                             // Closed channel?
-                            println!("Error on send event to postprocess thread: {}", _err)
+                            eprintln!("Error on send event to postprocess thread: {}", _err)
                         }
                     };
                 }
@@ -274,7 +274,7 @@ fn events_processing(events_reciever: mpsc::Receiver<EventInfo>, publishers: Vec
             match publisher.publish(&event_income) {
                 Ok(_) => {},
                 Err(err) => {
-                    println!("Error during publishing message: {:#?}", err);
+                    eprintln!("Error during publishing message: {:#?}", err);
                 }
             };
         }
