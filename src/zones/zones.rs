@@ -1,3 +1,4 @@
+use crate::zones::ZonesError;
 use crate::tracker::Tracker;
 use crate::events::{EventInfo, EventBBox, EventPOI};
 
@@ -48,16 +49,17 @@ impl Zone {
             objects_registered: HashSet::new()
         }
     }
-    pub fn contains_point(&self, x: f32, y: f32) -> bool {
-        let ppt = point_polygon_test(&self.pixel_coordinates, Point2f::new(x, y), false).unwrap();
-        ppt > 0.0 
+    pub fn contains_point(&self, x: f32, y: f32) -> Result<bool, ZonesError> {
+        let ppt = point_polygon_test(&self.pixel_coordinates, Point2f::new(x, y), false)?;
+        Ok(ppt > 0.0)
     }
-    pub fn draw(&self, img: &mut Mat) {
+    pub fn draw(&self, img: &mut Mat) -> Result<(), ZonesError> {
         for seg in self.segments {
-            line(img, seg[0], seg[1], self.color, 2, LINE_8, 0).unwrap();
+            line(img, seg[0], seg[1], self.color, 2, LINE_8, 0)?;
         } 
+        Ok(())
     }
-    pub fn process_tracker(&mut self, tracker: &mut Tracker, min_lifetime_seconds: i64, max_lifetime_seconds: i64, app_id: Option<String>, frame: Option<&Mat>) -> Vec<EventInfo> {
+    pub fn process_tracker(&mut self, tracker: &mut Tracker, min_lifetime_seconds: i64, max_lifetime_seconds: i64, app_id: Option<String>, frame: Option<&Mat>) -> Result<Vec<EventInfo>, ZonesError> {
         let mut new_events: Vec<EventInfo> = vec![];
         let current_ut = Utc::now().timestamp();
         for (object_id, object) in tracker.engine.objects.iter() {
@@ -66,17 +68,18 @@ impl Zone {
                 continue;
             }
             let center = object.get_center();
-            let object_extra = tracker.objects_extra.get(object_id);
-            if object_extra.is_none() {
-                continue;
-            }
-            let object_extra = object_extra.unwrap();
+            let object_extra = match tracker.objects_extra.get(object_id) {
+                Some(extra) => extra,
+                None => continue, // Early return if object_extra is None
+            };
+            let object_extra = object_extra;
             // Filter objects by min lifetime threshold
             let object_lifetime = object_extra.get_lifetime();
             if object_lifetime <= min_lifetime_seconds {
                 continue;
             }
-            if self.contains_point(center.x, center.y) {
+            let contains_object = self.contains_point(center.x, center.y)?;
+            if contains_object {
                 if self.objects_registered.contains(object_id) {
                     if object_lifetime > max_lifetime_seconds {
                         tracker.objects_extra.remove(object_id); // Remove object from tracker data to make it appear in next iteration again if object still exist
@@ -112,6 +115,6 @@ impl Zone {
                 new_events.push(new_event);
             }
         }
-        new_events
+        Ok(new_events)
     }
 }
