@@ -124,8 +124,8 @@ impl App {
         let id_scalar: Scalar = Scalar::from((0.0, 0.0, 255.0));
         let id_scalar_inverse: Scalar = invert_color(&id_scalar);
 
-        let mut bg_subtractor = create_background_subtractor_mog2((1.0 * fps).floor() as i32, 16.0, false).unwrap();
-        // let mut bg_subtractor = opencv::bgsegm::create_background_subtractor_cnt(15, false, 15*60, true).unwrap();
+        let mut bg_subtractor = create_background_subtractor_mog2((1.0 * fps).floor() as i32, 16.0, false)?;
+        // let mut bg_subtractor = opencv::bgsegm::create_background_subtractor_cnt(15, false, 15*60, true)?;
         let mut foreground_mask = Mat::default();
 
         let conf_threshold: f32 = self.detection.conf_threshold;
@@ -179,9 +179,9 @@ impl App {
 
         for received in rx_capture {
             let mut frame = received.frame.clone();
-            bg_subtractor.apply(&frame, &mut foreground_mask, -1.0).unwrap();
+            bg_subtractor.apply(&frame, &mut foreground_mask, -1.0)?;
             let mut frame_background = Mat::default(); 
-            bg_subtractor.get_background_image(&mut frame_background).unwrap();
+            bg_subtractor.get_background_image(&mut frame_background)?;
             let (nms_bboxes, nms_classes_ids, nms_confidences) = match neural_net.forward(&frame_background, conf_threshold, nms_threshold) {
                 Ok((a, b, c)) => { (a, b, c) },
                 Err(err) => {
