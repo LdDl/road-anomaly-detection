@@ -164,7 +164,10 @@ impl App {
                             } else {
                                 RedisConnection::new_with_password(redis_settings.host, redis_settings.port, redis_settings.db_index, redis_settings.channel_name, redis_settings.password)
                             };
-                            publishers.push(redis_conn);
+                            match redis_conn {
+                                Ok(conn) => publishers.push(conn),
+                                Err(e) => eprintln!("Failed to create Redis connection: {}. Ignoring Redis publisher", e),
+                            }
                         },
                         None => {}
                     }
