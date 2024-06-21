@@ -1,0 +1,13 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: Lopanov
+    given-names: Dmitrii
+    orcid: https://orcid.org/my-orcid?orcid=0009-0007-9734-6970
+title: "Road anomaly detection via computer vision and neural networks"
+version: 2.0.4
+identifiers:
+  - description: "This is the collection of archived snapshots of all versions of Road anomaly detection via computer vision and neural networks"
+    type: doi
+    value: 10.5281/zenodo.123456
+date-released: 2024-06-24
