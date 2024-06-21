@@ -3,8 +3,8 @@
     id = "My-fancy-road-anomaly-detection-software"
 
 [input]
-    # Source URL of video: https://www.youtube.com/watch?v=KBsqQez-O4w
-    video_src = "./data/tests/test1.mp4"
+    # Source URL of video: https://www.youtube.com/watch?v=z60Y20kJSmc
+    video_src = "./data/tests/cctv_example.mp4"
     # Use string below for usage with CSI camera (where sensor-id is camera indentifier)
     # video_src = "nvarguscamerasrc sensor-id=0 ! video/x-raw(memory:NVMM), width=(int)1280, height=(int)720, format=(string)NV12, framerate=(fraction)30/1 ! nvvidconv flip-method=0 ! video/x-raw, width=(int)1280, height=(int)720, format=(string)BGRx ! videoconvert ! video/x-raw, format=(string)BGR ! appsink"
     # Two options: rtsp / any number corresponding to local camera (device)
@@ -29,7 +29,7 @@
     network_weights = "./data/best.onnx"
     # Leave 'network_cfg' empty if using ONNX.
     # network_cfg = ""
-    conf_threshold = 0.5
+    conf_threshold = 0.6
     nms_threshold = 0.4
     net_width = 320
     net_height = 320
@@ -46,17 +46,18 @@
     # Adjust number of seconds to consider event is actually exists
     lifetime_seconds_min = 3
     # Adjust number of seconds after event would be considered as new even if detection object is the same
-    lifetime_seconds_max = 5
+    lifetime_seconds_max = 15
 
 # Leave [[zones]] empty if you want zone with size of the frame
+# Note that ID's must be unique if you want to distinct output data
 [[zones]]
     id = "zone_1"
-    geometry = [[904, 136], [1401, 197], [1567, 520], [804, 528]]
+    geometry = [[39, 52], [281, 54], [260, 331], [29, 319]]
     color_rgb = [0, 0, 255]
 
 [[zones]]
     id = "zone_2"
-    geometry = [[393, 615], [1029, 596], [1189, 912], [255, 1003]]
+    geometry = [[285, 54], [518, 80], [557, 322], [265, 331]]
     color_rgb = [255, 0, 255]
 
 [publishers]

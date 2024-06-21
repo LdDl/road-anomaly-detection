@@ -27,7 +27,18 @@ Diagram could speak more than a thousand words. I'm not digging into the Backgro
 Diagram is prepared via https://app.diagrams.net/. Source is [here](docs/anomaly_detection.drawio).
 
 ## Screenshots
-@w.i.p.
+
+imshow() output:
+
+<img src="docs/screenshot_1.png" width="720">
+
+Subscribe channel on the server:
+
+<img src="docs/screenshot_2.png" width="720">
+
+Wait until event has come:
+
+<img src="docs/screenshot_3-1.png" height="240" width="1080">
 
 ## Installation and usage
 
@@ -52,6 +63,32 @@ export ROAD_ANOMALY_CONFIG=$(pwd)/data/conf.toml
 ./target/release/road-anomaly-detector $ROAD_ANOMALY_CONFIG
 ```
 
+When events published into to the reciever server than you can expect following JSON structure:
+```json
+{
+    "id": "Event identifier represented as UUID v4",
+    "event_registered_at": UTC UnixTimestamp when event has been registered,
+    "event_image": "base64 representation of an image",
+    "object_id": "Detection identifier. Most of time would be represented as UUID v4",
+    "object_registered_at": UTC UnixTimestamp when detection has been registered,
+    "object_lifetime": Number of second while the detection was considered "relevant",
+    "object_bbox": {
+        "x": X-coordinate of the left top of the detection,
+        "y": Y-coordinate of the left top of the detection,
+        "width": Width of the corresponding detection bounding box,
+        "height": Height of the corresponding detection bounding box
+    },
+    "object_poi": {
+        "x": X-coordinate of the center of the detection bounding box,
+        "y": Y-coordinate of the center of the detection bounding box
+    },
+    "object_classname": "Label for the class",
+    "object_confidence": Confidence that detection is classified as corresponding class label,
+    "zone_id": "Unique identifier for zone of interests",
+    "equipment_id": "Optional application name (could be considered as equipment identifier for embedded devices)"
+}
+```
+
 ## Future works
 * Make REST API to extract and to mutate configuration;
 * Make MJPEG export;
@@ -69,6 +106,8 @@ export ROAD_ANOMALY_CONFIG=$(pwd)/data/conf.toml
 * Original Darknet YOLO repository - https://github.com/pjreddie/darknet
 * Most popular fork of Darknet YOLO - https://github.com/AlexeyAB/darknet
 * Developers of YOLOv8 - https://github.com/ultralytics/ultralytics. If you are aware of some original papers for YOLOv8 architecture, please contact me to mention it in this README.
+
+Video example has been taken from [here](https://www.youtube.com/watch?v=z60Y20kJSmc)
 
 Please cite this repository if you are using it
 

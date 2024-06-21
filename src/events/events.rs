@@ -56,4 +56,7 @@ impl EventInfo{
     pub fn get_id(&self) -> Uuid {
         self.id
     }
+    pub fn get_object_id(&self) -> String {
+        self.object_id.clone()
+    }
 }
