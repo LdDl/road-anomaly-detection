@@ -8,6 +8,7 @@ pub struct PublisherInternalError(String);
 pub enum PublisherError{
     Er(PublisherInternalError),
     RedisErr(RedisError),
+    SerdeErr(serde_json::Error)
 }
 
 impl From<PublisherInternalError> for PublisherError {
@@ -19,6 +20,12 @@ impl From<PublisherInternalError> for PublisherError {
 impl From<RedisError> for PublisherError {
     fn from(e: RedisError) -> Self {
         PublisherError::RedisErr(e)
+    }
+}
+
+impl From<serde_json::Error> for PublisherError {
+    fn from(e: serde_json::Error) -> Self {
+        PublisherError::SerdeErr(e)
     }
 }
 
