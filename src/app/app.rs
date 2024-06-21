@@ -194,7 +194,7 @@ impl App {
             tracker.match_objects(&mut tmp_detections, relative_time).unwrap();
             
             for zone in zones.iter_mut() {
-                let registered_events = zone.process_tracker(&mut tracker, lifetime_seconds_min, lifetime_seconds_max, Some(app_name.clone()), Some(&frame)).unwrap();
+                let registered_events = zone.process_tracker(&mut tracker, lifetime_seconds_min, lifetime_seconds_max, Some(app_name.clone()), Some(&frame))?;
                 for new_event in registered_events {
                     match events_sender.send(new_event) {
                         Ok(_)=>{ },
