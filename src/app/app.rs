@@ -209,7 +209,7 @@ impl App {
                 draw_bboxes(&mut frame, &tracker, bbox_scalar, bbox_scalar_inverse);
                 draw_identifiers(&mut frame, &tracker, id_scalar, id_scalar_inverse);
                 for zone in zones.iter() {
-                    zone.draw(&mut frame);
+                    zone.draw(&mut frame)?;
                 }
                 // resize(&frame_background, &mut resized_frame, Size::new(self.output.width, self.output.height), 1.0, 1.0, 1)?;
                 resize(&frame, &mut resized_frame, Size::new(self.output.width, self.output.height), 1.0, 1.0, 1)?;

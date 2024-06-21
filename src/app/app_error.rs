@@ -1,4 +1,5 @@
 use crate::video_capture;
+use crate::zones::zones_error;
 use std::fmt;
 use toml;
 
@@ -23,6 +24,7 @@ pub enum AppError {
     VideoError(video_capture::VideoCaptureError),
     OpenCVError(opencv::Error),
     TOMLError(toml::de::Error),
+    ZonesErrorInternal(zones_error::ZonesError),
 }
 
 impl From<AppInternalError> for AppError {
@@ -46,5 +48,11 @@ impl From<opencv::Error> for AppError {
 impl From<toml::de::Error> for AppError {
     fn from(e: toml::de::Error) -> Self {
         AppError::TOMLError(e)
+    }
+}
+
+impl From<zones_error::ZonesError> for AppError {
+    fn from(e: zones_error::ZonesError) -> Self {
+        AppError::ZonesErrorInternal(e)
     }
 }
