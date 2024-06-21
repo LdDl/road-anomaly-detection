@@ -1,4 +1,4 @@
-use crate::zones::ZonesError;
+use crate::zones::zones_error;
 use crate::tracker::Tracker;
 use crate::events::{EventInfo, EventBBox, EventPOI};
 
@@ -49,17 +49,17 @@ impl Zone {
             objects_registered: HashSet::new()
         }
     }
-    pub fn contains_point(&self, x: f32, y: f32) -> Result<bool, ZonesError> {
+    pub fn contains_point(&self, x: f32, y: f32) -> Result<bool, zones_error::ZonesError> {
         let ppt = point_polygon_test(&self.pixel_coordinates, Point2f::new(x, y), false)?;
         Ok(ppt > 0.0)
     }
-    pub fn draw(&self, img: &mut Mat) -> Result<(), ZonesError> {
+    pub fn draw(&self, img: &mut Mat) -> Result<(), zones_error::ZonesError> {
         for seg in self.segments {
             line(img, seg[0], seg[1], self.color, 2, LINE_8, 0)?;
         } 
         Ok(())
     }
-    pub fn process_tracker(&mut self, tracker: &mut Tracker, min_lifetime_seconds: i64, max_lifetime_seconds: i64, app_id: Option<String>, frame: Option<&Mat>) -> Result<Vec<EventInfo>, ZonesError> {
+    pub fn process_tracker(&mut self, tracker: &mut Tracker, min_lifetime_seconds: i64, max_lifetime_seconds: i64, app_id: Option<String>, frame: Option<&Mat>) -> Result<Vec<EventInfo>, zones_error::ZonesError> {
         let mut new_events: Vec<EventInfo> = vec![];
         let current_ut = Utc::now().timestamp();
         for (object_id, object) in tracker.engine.objects.iter() {
@@ -70,7 +70,7 @@ impl Zone {
             let center = object.get_center();
             let object_extra = match tracker.objects_extra.get(object_id) {
                 Some(extra) => extra,
-                None => continue, // Early return if object_extra is None
+                None => continue,
             };
             let object_extra = object_extra;
             // Filter objects by min lifetime threshold
