@@ -15,7 +15,7 @@ pub struct Detections {
     pub confidences: Vec<f32>,
 }
 
-pub fn process_yolo_detections(nms_bboxes: &[RectCV], nms_classes_ids: Vec<usize>, nms_confidences: Vec<f32>, net_classes: &[String], target_classes: &HashSet<String>, dt: f32) -> Detections {
+pub fn process_yolo_detections(nms_bboxes: &Vec<RectCV>, nms_classes_ids: Vec<usize>, nms_confidences: Vec<f32>, net_classes: &[String], target_classes: &HashSet<String>, dt: f32) -> Detections {
     if (nms_bboxes.len() != nms_classes_ids.len()) || (nms_bboxes.len() != nms_confidences.len()) || (nms_classes_ids.len() != nms_confidences.len()) {
         // Something wrong?
         println!("BBoxes len: {}, Classed IDs len: {}, Confidences len: {}", nms_bboxes.len(), nms_classes_ids.len(), nms_confidences.len());
