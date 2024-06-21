@@ -1,10 +1,10 @@
 use crate::detection::Detections;
+use crate::tracker::TrackerError;
 
 use uuid::Uuid;
 use chrono::Utc;
 use mot_rs::mot::IoUTracker;
 
-use std::error::Error;
 use std::collections::HashMap;
 use std::collections::hash_map::Entry::{
     Occupied,
@@ -54,7 +54,7 @@ impl Tracker {
             objects_extra: HashMap::new(),
         }
     }
-    pub fn match_objects(&mut self, detections: &mut Detections, current_relative_second: f32) -> Result<(), Box<dyn Error>> {
+    pub fn match_objects(&mut self, detections: &mut Detections, current_relative_second: f32) -> Result<(), TrackerError> {
         self.engine.match_objects(&mut detections.blobs)?;
         let current_ut = Utc::now().timestamp();
         for (idx, detection) in detections.blobs.iter().enumerate() {

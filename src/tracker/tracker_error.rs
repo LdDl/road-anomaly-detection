@@ -1,14 +1,13 @@
-use std::fmt;
-
-#[derive(Debug)]
-struct TrackerInternalError;
-impl fmt::Display for TrackerInternalError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Undefined Tracker error")
-    }
-}
+use mot_rs::mot;
 
 #[derive(Debug)]
 pub enum TrackerError {
-    //@ Todo
+    MOTError(mot::TrackerError),
+}
+
+
+impl From<mot::TrackerError> for TrackerError {
+    fn from(e: mot::TrackerError) -> Self {
+        TrackerError::MOTError(e)
+    }
 }
