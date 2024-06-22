@@ -26,13 +26,13 @@
     # Available model formats: "darknet", "onnx"
     # Default is "darknet"
     network_format = "onnx"
-    network_weights = "./data/best.onnx"
+    network_weights = "./data/best_small608.onnx"
     # Leave 'network_cfg' empty if using ONNX.
     # network_cfg = ""
-    conf_threshold = 0.6
+    conf_threshold = 0.8
     nms_threshold = 0.4
-    net_width = 320
-    net_height = 320
+    net_width = 608
+    net_height = 608
     # Target classes to be used in filtering.
     # Leave array empty if all net classes should be used
     target_classes = []

@@ -35,11 +35,12 @@ impl RedisConnection {
 impl PublisherTrait for RedisConnection {
     fn publish(&self, event_info: &EventInfo) -> Result<(), PublisherError> {
         let event_id = event_info.get_id();
-        println!("Trying to send event: {}. Time: {}", event_id, chrono::Utc::now());
+        let object_id = event_info.get_object_id();
+        println!("Trying to send event: {}. Object ID: '{}'. Time: {}", event_id, object_id, chrono::Utc::now());
         let mut redis_conn = self.client.get_connection()?;
         let event_json_str = serde_json::to_string(event_info)?;
         redis_conn.publish(self.channel_name.to_owned(), event_json_str)?;
-        println!("Success for sending event: '{}'. Object ID: '{}'. Time: {}", event_id, event_info.get_object_id(), chrono::Utc::now());
+        println!("Success for sending event: '{}'. Object ID: '{}'. Time: {}", event_id, object_id, chrono::Utc::now());
         Ok(())
     }
 }
