@@ -97,6 +97,7 @@ pub struct RedisPublisherSettings {
     pub enable: bool,
     pub host: String,
     pub port: i32,
+    pub username: String,
     pub password: String,
     pub db_index: i32,
     pub channel_name: String,

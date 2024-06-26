@@ -27,6 +27,16 @@ impl RedisConnection {
             client: Arc::new(client),
         }))
     }
+    pub fn new_with_username_password(host: String, port: i32, db_index: i32, channel_name: String, username: String, password: String) -> Result<Box<dyn PublisherTrait>, redis::RedisError> {
+        let client = Client::open(format!(
+            "redis://{}:{}@{}:{}/{}",
+            username, password, host, port, db_index
+        ))?;
+        Ok(Box::new(RedisConnection {
+            channel_name: channel_name_handler(channel_name), 
+            client: Arc::new(client),
+        }))
+    }
     pub fn set_channel(&mut self, _channel_name: String) {
         self.channel_name = channel_name_handler(_channel_name);
     }

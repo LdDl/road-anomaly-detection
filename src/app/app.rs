@@ -162,7 +162,11 @@ impl App {
                             let redis_conn = if redis_settings.password.is_empty() {
                                 RedisConnection::new(redis_settings.host, redis_settings.port, redis_settings.db_index, redis_settings.channel_name)
                             } else {
-                                RedisConnection::new_with_password(redis_settings.host, redis_settings.port, redis_settings.db_index, redis_settings.channel_name, redis_settings.password)
+                                if redis_settings.username.is_empty() {
+                                    RedisConnection::new_with_password(redis_settings.host, redis_settings.port, redis_settings.db_index, redis_settings.channel_name, redis_settings.password)
+                                } else {
+                                    RedisConnection::new_with_username_password(redis_settings.host, redis_settings.port, redis_settings.db_index, redis_settings.channel_name, redis_settings.username, redis_settings.password)
+                                }
                             };
                             match redis_conn {
                                 Ok(conn) => publishers.push(conn),
