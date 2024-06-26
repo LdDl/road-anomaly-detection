@@ -15,7 +15,7 @@ pub struct Detections {
     pub confidences: Vec<f32>,
 }
 
-pub fn process_yolo_detections(nms_bboxes: &Vec<RectCV>, nms_classes_ids: Vec<usize>, nms_confidences: Vec<f32>, net_classes: &[String], target_classes: &HashSet<String>, dt: f32) -> Detections {
+pub fn process_yolo_detections(nms_bboxes: &Vec<RectCV>, nms_classes_ids: Vec<usize>, nms_confidences: Vec<f32>, net_classes: &[String], target_classes: &HashSet<String>, dt: f32, scale_width: f32, scale_height: f32) -> Detections {
     if (nms_bboxes.len() != nms_classes_ids.len()) || (nms_bboxes.len() != nms_confidences.len()) || (nms_classes_ids.len() != nms_confidences.len()) {
         // Something wrong?
         println!("BBoxes len: {}, Classed IDs len: {}, Confidences len: {}", nms_bboxes.len(), nms_classes_ids.len(), nms_confidences.len());
@@ -38,9 +38,9 @@ pub fn process_yolo_detections(nms_bboxes: &Vec<RectCV>, nms_classes_ids: Vec<us
             continue;
         }
         class_names.push(classname);
-        let center_x = bbox.x as f32 + bbox.width as f32 / 2.0;
-        let center_y = bbox.y as f32 + bbox.height as f32 / 2.0;
-        let kb: SimpleBlob = SimpleBlob::new_with_center_dt(Point::new(center_x, center_y), Rect::new(bbox.x as f32, bbox.y as f32, bbox.width as f32, bbox.height as f32), dt);
+        let center_x = (bbox.x as f32 + bbox.width as f32 / 2.0) * scale_width;
+        let center_y = (bbox.y as f32 + bbox.height as f32 / 2.0) * scale_height;
+        let kb: SimpleBlob = SimpleBlob::new_with_center_dt(Point::new(center_x, center_y), Rect::new(bbox.x as f32 * scale_width, bbox.y as f32 * scale_height, bbox.width as f32 * scale_width, bbox.height as f32 * scale_height), dt);
         // let mut kb = SimpleBlob::new_with_dt(Rect::new(bbox.x as f32, bbox.y as f32, bbox.width as f32, bbox.height as f32), dt);
         aggregated_data.push(kb);
     }

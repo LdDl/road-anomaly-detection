@@ -177,9 +177,15 @@ impl App {
             events_processing(events_reciever, publishers);
         });
 
+        let mut resized_frame_for_bg = Mat::default();
+        let scale_width = width / self.detection.net_width as f32;
+        let scale_height = height / self.detection.net_height as f32;
+
         for received in rx_capture {
             let mut frame = received.frame.clone();
-            bg_subtractor.apply(&frame, &mut foreground_mask, -1.0)?;
+            // We need to resize image despite of neural network class (DNN module resizes image) since we need to speed up background subtractor
+            resize(&frame, &mut resized_frame_for_bg, Size::new(self.detection.net_width, self.detection.net_height), 1.0, 1.0, 1)?;
+            bg_subtractor.apply(&resized_frame_for_bg, &mut foreground_mask, -1.0)?;
             let mut frame_background = Mat::default(); 
             bg_subtractor.get_background_image(&mut frame_background)?;
             let (nms_bboxes, nms_classes_ids, nms_confidences) = match neural_net.forward(&frame_background, conf_threshold, nms_threshold) {
@@ -189,7 +195,7 @@ impl App {
                     break;
                 }
             };
-            let mut tmp_detections = process_yolo_detections(&nms_bboxes, nms_classes_ids, nms_confidences, &net_classes, &target_classes, time_frac);
+            let mut tmp_detections = process_yolo_detections(&nms_bboxes, nms_classes_ids, nms_confidences, &net_classes, &target_classes, time_frac, scale_width, scale_height);
             let relative_time = received.overall_seconds;
             tracker.match_objects(&mut tmp_detections, relative_time).unwrap();
             

@@ -26,7 +26,7 @@
     # Available model formats: "darknet", "onnx"
     # Default is "darknet"
     network_format = "onnx"
-    network_weights = "./data/best_small608.onnx"
+    network_weights = "./data/best_nano.onnx"
     # Leave 'network_cfg' empty if using ONNX.
     # network_cfg = ""
     conf_threshold = 0.8
