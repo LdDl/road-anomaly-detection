@@ -6,31 +6,18 @@ use crate::tracker::Tracker;
 use crate::zones::Zone;
 use crate::events::EventInfo;
 use crate::publisher::redis_publisher::RedisConnection;
-use crate::draw::{invert_color, draw_bboxes, draw_identifiers};
+use crate::draw::{Scalar, invert_color, draw_bboxes, draw_identifiers};
+use crate::background::BackgroundSubtractorMOG2;
 
 use crate::app::app_settings;
 use crate::app::app_error::AppError;
-use crate::app::app_error::AppInternalError;
-
-use opencv::{
-    core::Mat, core::{Size, Scalar, get_cuda_enabled_device_count}, highgui::imshow, highgui::named_window, highgui::resize_window, highgui::wait_key, imgproc::resize, prelude::MatTraitConst, prelude::VideoCaptureTrait, prelude::VideoCaptureTraitConst, video::{create_background_subtractor_mog2, BackgroundSubtractorMOG2Trait, BackgroundSubtractorTraitConst}, videoio::VideoCapture,
-    dnn::DNN_BACKEND_CUDA,
-    dnn::DNN_TARGET_CUDA,
-    dnn::DNN_BACKEND_OPENCV,
-    dnn::DNN_TARGET_CPU,
-};
+use minifb::{Key, ScaleMode, Window, WindowOptions};
 
 use std::thread;
-use std::sync::mpsc;
+use std::sync::{mpsc, Arc, atomic::{AtomicBool, Ordering}};
 use std::collections::HashSet;
-const EMPTY_FRAMES_LIMIT: u16 = 60;
 
-use od_opencv::{
-    model_format::ModelFormat,
-    model_format::ModelVersion,
-    model::new_from_file,
-    model::ModelTrait,
-};
+use od_opencv::{Model, ModelUltralyticsOrt};
 
 pub struct App {
     pub application_info: app_settings::ApplicationInfo,
@@ -40,47 +27,39 @@ pub struct App {
     pub tracking: app_settings::TrackingSettings,
     pub zones_settings: Option<Vec<app_settings::ZoneSettings>>,
     pub publishers: Option<app_settings::PublishersSettings>,
-    pub model_format: ModelFormat,
-    pub model_version: ModelVersion,
 }
 
 impl App {
     pub fn run(&mut self) -> Result<(), AppError> {
-        let mut neural_net = prepare_neural_net(self.model_format, self.model_version, &self.detection.network_weights, self.detection.network_cfg.clone(), (self.detection.net_width, self.detection.net_height))?;
+        let mut neural_net = prepare_neural_net(&self.detection.network_weights, (self.detection.net_width, self.detection.net_height))?;
 
         let mut video_capture = video_capture::get_video_capture(self.input.video_source.as_str(), self.input.video_source_typ.clone())?;
-        let (width, height, fps) = probe_video(&video_capture)?;
+        let (width, height, fps) = (video_capture.width as f32, video_capture.height as f32, video_capture.fps);
         println!("Video probe: {{Width: {width}px | Height: {height}px | FPS: {fps}}}");
 
-        let opened = VideoCapture::is_opened(&video_capture).map_err(AppError::from)?;
-        if !opened {
-            return Err(AppError::Internal(AppInternalError{typ: 2, txt: self.input.video_source.clone()}))
-        }
+        let capture_process = video_capture.process();
+        let signal_capture = video_capture.process();
+        let running = Arc::new(AtomicBool::new(true));
+        let signal_running = running.clone();
+        ctrlc::set_handler(move || {
+            signal_running.store(false, Ordering::Relaxed);
+            signal_capture.stop();
+        })?;
 
         let (tx_capture, rx_capture): (mpsc::SyncSender<ThreadedFrame>, mpsc::Receiver<ThreadedFrame>) = mpsc::sync_channel(0);
         thread::spawn(move || {
             let mut frames_counter: f32 = 0.0;
             let mut total_seconds: f32 = 0.0;
             let mut overall_seconds: f32 = 0.0;
-            let mut empty_frames_countrer: u16 = 0;
             loop {
-                let mut read_frame = Mat::default();
-                match video_capture.read(&mut read_frame) {
-                    Ok(_) => {},
-                    Err(_) => {
-                        println!("Can't read next frame");
+                let read_frame = match video_capture.read_frame() {
+                    Ok(Some(frame)) => frame,
+                    Ok(None) => break,
+                    Err(err) => {
+                        eprintln!("Can't read next frame: {}", err);
                         break;
                     }
                 };
-                if read_frame.empty() {
-                    println!("[WARNING]: Empty frame");
-                    empty_frames_countrer += 1;
-                    if empty_frames_countrer >= EMPTY_FRAMES_LIMIT {
-                        println!("Too many empty frames");
-                        break
-                    }
-                    continue;
-                }
                 frames_counter += 1.0;
                 let second_fraction = total_seconds + (frames_counter / fps);
                 if frames_counter >= fps {
@@ -96,37 +75,26 @@ impl App {
                 match tx_capture.send(frame) {
                     Ok(_)=>{},
                     Err(_err) => {
-                        // Closed channel?
-                        // println!("Error on send frame to detection thread: {}", _err)
+                        break;
                     }
                 };
             }
-            match video_capture.release() {
-                Ok(_) => {
-                    println!("Video capture has been closed successfully");
-                },
-                Err(err) => {
-                    eprintln!("Can't release video capturer due the error: {}", err);
-                }
-            };
+            println!("Video capture has been closed successfully");
         });
 
 
-        let mut resized_frame = Mat::default();
-        let window = &self.output.window_name;
-        if self.output.enable {
-            named_window(window, 1)?;
-            resize_window(window, self.output.width, self.output.height)?;
-        }
+        let mut window = if self.output.enable {
+            Some(Window::new(&self.output.window_name, self.output.width as usize, self.output.height as usize, WindowOptions{resize: true, scale_mode: ScaleMode::Stretch, ..WindowOptions::default()})?)
+        } else {
+            None
+        };
        
-        let bbox_scalar: Scalar = Scalar::from((0.0, 0.0, 255.0));
+        let bbox_scalar: Scalar = Scalar::from((0, 0, 255));
         let bbox_scalar_inverse:Scalar = invert_color(&bbox_scalar);
-        let id_scalar: Scalar = Scalar::from((0.0, 0.0, 255.0));
+        let id_scalar: Scalar = Scalar::from((0, 0, 255));
         let id_scalar_inverse: Scalar = invert_color(&id_scalar);
 
-        let mut bg_subtractor = create_background_subtractor_mog2((1.0 * fps).floor() as i32, 16.0, false)?;
-        // let mut bg_subtractor = opencv::bgsegm::create_background_subtractor_cnt(15, false, 15*60, true)?;
-        let mut foreground_mask = Mat::default();
+        let mut bg_subtractor = BackgroundSubtractorMOG2::new(fps.floor() as usize, 16.0);
 
         let conf_threshold: f32 = self.detection.conf_threshold;
         let nms_threshold: f32 = self.detection.nms_threshold;
@@ -181,18 +149,18 @@ impl App {
             events_processing(events_reciever, publishers);
         });
 
-        let mut resized_frame_for_bg = Mat::default();
         let scale_width = width / self.detection.net_width as f32;
         let scale_height = height / self.detection.net_height as f32;
 
         for received in rx_capture {
-            let mut frame = received.frame.clone();
-            // We need to resize image despite of neural network class (DNN module resizes image) since we need to speed up background subtractor
-            resize(&frame, &mut resized_frame_for_bg, Size::new(self.detection.net_width, self.detection.net_height), 1.0, 1.0, 1)?;
-            bg_subtractor.apply(&resized_frame_for_bg, &mut foreground_mask, -1.0)?;
-            let mut frame_background = Mat::default(); 
-            bg_subtractor.get_background_image(&mut frame_background)?;
-            let (nms_bboxes, nms_classes_ids, nms_confidences) = match neural_net.forward(&frame_background, conf_threshold, nms_threshold) {
+            if !running.load(Ordering::Relaxed) {
+                break;
+            }
+            let mut frame = received.frame;
+            // Run MOG2 at the network resolution before passing its background to YOLO.
+            let resized_frame_for_bg = frame.resize(self.detection.net_width as u32, self.detection.net_height as u32);
+            let frame_background = bg_subtractor.apply(&resized_frame_for_bg);
+            let (nms_bboxes, nms_classes_ids, nms_confidences) = match neural_net.forward(&frame_background.to_image_buffer(), conf_threshold, nms_threshold) {
                 Ok((a, b, c)) => { (a, b, c) },
                 Err(err) => {
                     eprintln!("Can't process input of neural network due the error {:?}", err);
@@ -204,7 +172,7 @@ impl App {
             tracker.match_objects(&mut tmp_detections, relative_time).unwrap();
             
             for zone in zones.iter_mut() {
-                let registered_events = zone.process_tracker(&mut tracker, lifetime_seconds_min, lifetime_seconds_max, Some(app_name.clone()), Some(&frame))?;
+                let registered_events = zone.process_tracker(&mut tracker, lifetime_seconds_min, lifetime_seconds_max, Some(app_name.clone()), Some(&frame));
                 for new_event in registered_events {
                     match events_sender.send(new_event) {
                         Ok(_)=>{ },
@@ -215,66 +183,32 @@ impl App {
                     };
                 }
             }
-            if self.output.enable {
+            if let Some(window) = window.as_mut() {
                 draw_bboxes(&mut frame, &tracker, bbox_scalar, bbox_scalar_inverse);
                 draw_identifiers(&mut frame, &tracker, id_scalar, id_scalar_inverse);
                 for zone in zones.iter() {
-                    zone.draw(&mut frame)?;
+                    zone.draw(&mut frame);
                 }
-                // resize(&frame_background, &mut resized_frame, Size::new(self.output.width, self.output.height), 1.0, 1.0, 1)?;
-                resize(&frame, &mut resized_frame, Size::new(self.output.width, self.output.height), 1.0, 1.0, 1)?;
-                if resized_frame.size()?.width > 0 {
-                    imshow(window, &resized_frame)?;
-                }
-                let key = wait_key(10)?;
-                if key == 27 /* esc */ || key == 115 /* s */ || key == 83 /* S */ {
+                let resized_frame = frame.resize(self.output.width as u32, self.output.height as u32);
+                window.update_with_buffer(&resized_frame.to_window_buffer(), resized_frame.width as usize, resized_frame.height as usize)?;
+                if !window.is_open() || window.is_key_down(Key::Escape) || window.is_key_down(Key::S) {
                     break;
                 }
             }
         }
 
+        capture_process.stop();
         Ok(())
     }
 }
 
-fn probe_video(capture: &VideoCapture) ->  Result<(f32, f32, f32), AppError> {
-    let fps = capture.get(opencv::videoio::CAP_PROP_FPS)? as f32;
-    let frame_cols = capture.get(opencv::videoio::CAP_PROP_FRAME_WIDTH)? as f32;
-    let frame_rows = capture.get(opencv::videoio::CAP_PROP_FRAME_HEIGHT)? as f32;
-    // Is it better to get width/height from frame information?
-    // let mut frame = Mat::default();
-    // match capture.read(&mut frame) {
-    //     Ok(_) => {},
-    //     Err(_) => {
-    //         return Err(AppError::VideoError(AppVideoError{typ: 2}));
-    //     }
-    // };
-    // let frame_cols = frame.cols() as f32;
-    // let frame_rows = frame.rows() as f32;
-    Ok((frame_cols, frame_rows, fps))
-}
-
-fn prepare_neural_net(mf: ModelFormat, mv: ModelVersion, weights: &str, configuration: Option<String>, net_size: (i32, i32)) -> Result<Box<dyn ModelTrait>, AppError> {
-
-    /* Check if CUDA is an option at all */
-    let cuda_count = get_cuda_enabled_device_count()?;
-    let cuda_available = cuda_count > 0;
-    println!("CUDA is {}", if cuda_available { "'available'" } else { "'not available'" });
-    println!("Model format is '{:?}'", mf);
-    println!("Model type is '{:?}'", mv);
-
-    // Hacky way to convert Option<String> to Option<&str>
-    let configuration_str = configuration.as_deref();
-
-    let neural_net = new_from_file(
-        weights,
-        configuration_str,
-        (net_size.0, net_size.1),
-        mf, mv,
-        if cuda_available { DNN_BACKEND_CUDA } else { DNN_BACKEND_OPENCV },
-        if cuda_available { DNN_TARGET_CUDA } else { DNN_TARGET_CPU },
-        vec![]
-    )?;
+fn prepare_neural_net(weights: &str, net_size: (i32, i32)) -> Result<ModelUltralyticsOrt, AppError> {
+    let net_size = (net_size.0 as u32, net_size.1 as u32);
+    #[cfg(feature = "ort-cuda")]
+    let neural_net = Model::ort_cuda(weights, net_size)?;
+    #[cfg(not(feature = "ort-cuda"))]
+    let neural_net = Model::ort(weights, net_size)?;
+    println!("Model backend is ONNX Runtime");
     Ok(neural_net)
 }
 

@@ -1,12 +1,10 @@
-use crate::zones::zones_error;
 use crate::tracker::Tracker;
 use crate::events::{EventInfo, EventBBox, EventPOI};
+use crate::frame::RawFrame;
+use crate::draw::{Scalar, draw_line};
 
 use uuid::Uuid;
 use chrono::Utc;
-use opencv::{
-    core::Mat, core::Point2f, core::Point2i, core::Scalar, core::Vector, imgproc::line, imgproc::point_polygon_test, imgproc::LINE_8
-};
 
 use std::collections::HashSet;
 
@@ -14,32 +12,24 @@ use std::collections::HashSet;
 pub struct Zone {
     pub id: String,
     pub color: Scalar,
-    pixel_coordinates: Vector<Point2f>,
-    segments: [[Point2i; 2]; 4],
+    pixel_coordinates: [[i32; 2]; 4],
+    segments: [[[i32; 2]; 2]; 4],
     objects_registered: HashSet<Uuid>
 }
 
 impl Zone {
     pub fn new(id: String, coordinates: [[i32; 2]; 4], color_rgb: Option<[u16; 3]>) -> Self {
-        let pixel_coordinates: Vector<Point2f> = coordinates.iter().map(|pair| {
-            Point2f::new(pair[0] as f32, pair[1] as f32)
-        }).collect();
-        let mut segments: [[Point2i; 2]; 4] = [[Point2i::new(0, 0), Point2i::new(0, 0)], [Point2i::new(0, 0), Point2i::new(0, 0)], [Point2i::new(0, 0), Point2i::new(0, 0)], [Point2i::new(0, 0), Point2i::new(0, 0)]];
+        let pixel_coordinates = coordinates;
+        let mut segments = [[[0; 2]; 2]; 4];
         for i in 1..coordinates.len() {
-            let prev_pt = Point2i::new(
-                coordinates[i - 1][0],
-                coordinates[i - 1][1],
-            );
-            let current_pt = Point2i::new(
-                coordinates[i][0],
-                coordinates[i][1],
-            );
+            let prev_pt = coordinates[i - 1];
+            let current_pt = coordinates[i];
             segments[i-1] = [prev_pt, current_pt];
         }
-        segments[segments.len() - 1] = [Point2i::new(coordinates[coordinates.len()-1][0], coordinates[coordinates.len()-1][1]), Point2i::new(coordinates[0][0], coordinates[0][1])];
+        segments[segments.len() - 1] = [coordinates[coordinates.len()-1], coordinates[0]];
         let color = match color_rgb {
-            Some(rgb_array) => Scalar::from((rgb_array[2] as f64, rgb_array[1] as f64, rgb_array[0] as f64)),
-            None => Scalar::from((0., 0., 0.))
+            Some(rgb_array) => Scalar::from((rgb_array[2].min(255) as u8, rgb_array[1].min(255) as u8, rgb_array[0].min(255) as u8)),
+            None => Scalar::from((0, 0, 0))
         };
         Zone{
             id,
@@ -49,17 +39,32 @@ impl Zone {
             objects_registered: HashSet::new()
         }
     }
-    pub fn contains_point(&self, x: f32, y: f32) -> Result<bool, zones_error::ZonesError> {
-        let ppt = point_polygon_test(&self.pixel_coordinates, Point2f::new(x, y), false)?;
-        Ok(ppt > 0.0)
+    pub fn contains_point(&self, x: f32, y: f32) -> bool {
+        let x = x as f64;
+        let y = y as f64;
+        let mut inside = false;
+        let mut previous = self.pixel_coordinates.len() - 1;
+        for current in 0..self.pixel_coordinates.len() {
+            let [ax, ay] = self.pixel_coordinates[previous].map(|value| value as f64);
+            let [bx, by] = self.pixel_coordinates[current].map(|value| value as f64);
+            let cross = (x - ax) * (by - ay) - (y - ay) * (bx - ax);
+            // The boundary is excluded, matching the original zone check.
+            if cross == 0.0 && x >= ax.min(bx) && x <= ax.max(bx) && y >= ay.min(by) && y <= ay.max(by) {
+                return false;
+            }
+            if (ay > y) != (by > y) && x < ax + (y - ay) * (bx - ax) / (by - ay) {
+                inside = !inside;
+            }
+            previous = current;
+        }
+        inside
     }
-    pub fn draw(&self, img: &mut Mat) -> Result<(), zones_error::ZonesError> {
+    pub fn draw(&self, img: &mut RawFrame) {
         for seg in self.segments {
-            line(img, seg[0], seg[1], self.color, 2, LINE_8, 0)?;
+            draw_line(img, seg[0], seg[1], self.color, 2);
         } 
-        Ok(())
     }
-    pub fn process_tracker(&mut self, tracker: &mut Tracker, min_lifetime_seconds: i64, max_lifetime_seconds: i64, app_id: Option<String>, frame: Option<&Mat>) -> Result<Vec<EventInfo>, zones_error::ZonesError> {
+    pub fn process_tracker(&mut self, tracker: &mut Tracker, min_lifetime_seconds: i64, max_lifetime_seconds: i64, app_id: Option<String>, frame: Option<&RawFrame>) -> Vec<EventInfo> {
         let mut new_events: Vec<EventInfo> = vec![];
         let current_ut = Utc::now().timestamp();
         for (object_id, object) in tracker.engine.objects.iter() {
@@ -78,11 +83,12 @@ impl Zone {
             if object_lifetime <= min_lifetime_seconds {
                 continue;
             }
-            let contains_object = self.contains_point(center.x, center.y)?;
+            let contains_object = self.contains_point(center.x, center.y);
             if contains_object {
                 if self.objects_registered.contains(object_id) {
                     if object_lifetime > max_lifetime_seconds {
-                        tracker.objects_extra.remove(object_id); // Remove object from tracker data to make it appear in next iteration again if object still exist
+                        // Remove object from tracker data to make it appear in next iteration again if object still exist
+                        tracker.objects_extra.remove(object_id);
                         self.objects_registered.remove(object_id);
                     }
                     continue;
@@ -115,6 +121,6 @@ impl Zone {
                 new_events.push(new_event);
             }
         }
-        Ok(new_events)
+        new_events
     }
 }

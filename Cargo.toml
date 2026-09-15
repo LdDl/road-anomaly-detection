@@ -9,15 +9,29 @@ edition = "2021"
 name = "road-anomaly-detector"
 path = "src/main.rs"
 
+[features]
+default = ["ort-backend"]
+ort-backend = ["od_opencv/ort-backend"]
+ort-cuda = ["ort-backend", "od_opencv/ort-cuda-backend"]
+
 [dependencies]
 toml = "0.5"
 ctrlc = { version = "3.0", features = ["termination"] }
 chrono = { version = "0.4", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-opencv = { version = "0.91.3" }
-od_opencv = "0.1.6"
+od_opencv = { version = "0.8.2", default-features = false }
+# od_opencv 0.8.2 uses the CUDA API from this ORT release.
+ort = "=2.0.0-rc.12"
+ndarray = "0.17"
+rayon = "1.10"
+image = { version = "0.25", default-features = false }
+png = "0.18.1"
+minifb = "0.28"
 mot-rs = "0.1.2"
 uuid = { version = "1.8.0", features = ["serde", "v4"] }
 redis = { version = "0.25.4" }
 base64 = { version = "0.22.1" }
+
+[target.'cfg(unix)'.dependencies]
+nix = { version = "0.30", features = ["signal"] }

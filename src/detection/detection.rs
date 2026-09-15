@@ -1,5 +1,5 @@
 
-use opencv::core::Rect as RectCV;
+use od_opencv::BBox as RectCV;
 
 use mot_rs::mot::SimpleBlob;
 use mot_rs::utils::{

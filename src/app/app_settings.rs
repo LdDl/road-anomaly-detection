@@ -3,7 +3,6 @@ use crate::app::App;
 use serde::{ Deserialize, Serialize };
 use std::fs;
 use std::fmt;
-use od_opencv::model_format::{ModelFormat, ModelVersion};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ApplicationInfo {
@@ -41,35 +40,33 @@ pub struct DetectionSettings {
 }
 
 impl DetectionSettings {
-    pub fn get_nn_format(&self) -> Result<ModelFormat, AppError> {
+    pub fn validate(&self) -> Result<(), AppError> {
         match self.network_format.clone() {
             Some(mf) => {
                 match mf.to_lowercase().as_str() {
-                    "darknet" => { Ok(ModelFormat::Darknet) },
-                    "onnx" => { Ok(ModelFormat::ONNX) },
+                    "onnx" => {},
                     _ => { 
-                       Err(AppError::from(AppInternalError{typ: 3, txt: mf}))
+                       return Err(AppError::from(AppInternalError{typ: 3, txt: format!("{}. Convert the model to ONNX first", mf)}));
                     }
                 }
             },
-            None => { Ok(ModelFormat::Darknet) }
-        }
-    }
-    pub fn get_nn_version(&self) -> Result<ModelVersion, AppError> {
+            None => {}
+        };
         match self.network_ver {
             Some(mv) => {
                 match mv {
-                    3 => { Ok(ModelVersion::V3) },
-                    4 => { Ok(ModelVersion::V4) },
-                    7 => { Ok(ModelVersion::V7) },
-                    8 => { Ok(ModelVersion::V8) },
+                    3 | 4 | 7 | 8 | 9 | 11 => {},
                     _ => { 
-                        Err(AppError::from(AppInternalError{typ: 4, txt: format!("{}", mv)}))
+                        return Err(AppError::from(AppInternalError{typ: 4, txt: format!("{}", mv)}));
                     }
                 }
             },
-            None => { Ok(ModelVersion::V3) }
+            None => {}
+        };
+        if self.net_width <= 0 || self.net_height <= 0 {
+            return Err(AppError::from(AppInternalError{typ: 6, txt: format!("Invalid network dimensions: {}x{}", self.net_width, self.net_height)}));
         }
+        Ok(())
     }
 }
 
@@ -122,8 +119,10 @@ impl AppSettings {
     }
 
     pub fn build(&self) -> Result<App, AppError> {
-        let mf = self.detection.get_nn_format()?;
-        let mv = self.detection.get_nn_version()?;
+        self.detection.validate()?;
+        if self.output.enable && (self.output.width <= 0 || self.output.height <= 0) {
+            return Err(AppError::from(AppInternalError{typ: 6, txt: format!("Invalid output dimensions: {}x{}", self.output.width, self.output.height)}));
+        }
         if self.tracking.lifetime_seconds_min >= self.tracking.lifetime_seconds_max {
             return Err(AppError::from(AppInternalError{typ: 5, txt: format!("Incorrect lifetimes. Min: {}, Max: {}", self.tracking.lifetime_seconds_min, self.tracking.lifetime_seconds_max)}));
         }
@@ -135,8 +134,6 @@ impl AppSettings {
             tracking: self.tracking.clone(),
             zones_settings: self.zones.clone(),
             publishers: self.publishers.clone(),
-            model_format: mf,
-            model_version: mv
         })
     }
 }

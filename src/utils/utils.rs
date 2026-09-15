@@ -1,15 +1,11 @@
 use serde::Serializer;
-use opencv::{
-    core::Mat,
-    core::Vector,
-    imgcodecs::imencode
-};
+use crate::frame::RawFrame;
 use base64::{
     Engine,
     engine::general_purpose
 };
 
-pub fn serialize_mat_as_base64<S>(mat: &Option<Mat>, serializer: S) -> Result<S::Ok, S::Error>
+pub fn serialize_mat_as_base64<S>(mat: &Option<RawFrame>, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
@@ -22,9 +18,18 @@ where
     }
 }
 
-pub fn mat_as_base64(mat: &Mat) -> Result<String, opencv::Error> {
-    let mut buf = Vector::new();
-    imencode(".png", mat, &mut buf, &Vector::new())?;
+pub fn mat_as_base64(mat: &RawFrame) -> Result<String, png::EncodingError> {
+    let mut rgb = mat.data.clone();
+    for pixel in rgb.chunks_exact_mut(3) {
+        pixel.swap(0, 2);
+    }
+    let mut buf = Vec::new();
+    let mut encoder = png::Encoder::new(&mut buf, mat.width, mat.height);
+    encoder.set_color(png::ColorType::Rgb);
+    encoder.set_depth(png::BitDepth::Eight);
+    let mut writer = encoder.write_header()?;
+    writer.write_image_data(&rgb)?;
+    writer.finish()?;
     // Convert the bytes to a base64 string
     Ok(general_purpose::STANDARD.encode(&buf))
 }

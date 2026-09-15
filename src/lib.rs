@@ -7,3 +7,8 @@ pub mod events;
 pub mod zones;
 pub mod draw;
 pub mod publisher;
+pub mod frame;
+pub mod background;
+
+#[cfg(not(feature = "ort-backend"))]
+compile_error!("Enable the ort-backend or ort-cuda feature");

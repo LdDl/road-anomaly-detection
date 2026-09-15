@@ -2,7 +2,7 @@ use crate::utils::serialize_mat_as_base64;
 
 use serde::Serialize;
 use uuid::Uuid;
-use opencv::core::Mat;
+use crate::frame::RawFrame;
 
 #[derive(Debug, Serialize)]
 pub struct EventBBox {
@@ -23,7 +23,7 @@ pub struct EventInfo {
     id: Uuid,
     event_registered_at: i64,
     #[serde(serialize_with = "serialize_mat_as_base64")]
-    event_image: Option<Mat>,
+    event_image: Option<RawFrame>,
     object_id: String,
     object_registered_at: i64,
     object_lifetime: i64,
@@ -36,7 +36,7 @@ pub struct EventInfo {
 }
 
 impl EventInfo{
-    pub fn new(unix_tm: i64, frame: Option<&Mat>, object_id: String, object_registered_unix_tm: i64, object_lifetime: i64, object_bbox: EventBBox, object_poi: EventPOI, classname: String, confidence: f32, zone_id: String, equipment_id: Option<String>) -> Self {
+    pub fn new(unix_tm: i64, frame: Option<&RawFrame>, object_id: String, object_registered_unix_tm: i64, object_lifetime: i64, object_bbox: EventBBox, object_poi: EventPOI, classname: String, confidence: f32, zone_id: String, equipment_id: Option<String>) -> Self {
         EventInfo{
             id: Uuid::new_v4(),
             event_registered_at: unix_tm,

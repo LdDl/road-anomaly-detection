@@ -1,5 +1,4 @@
 use crate::video_capture;
-use crate::zones::zones_error;
 use std::fmt;
 use toml;
 
@@ -13,6 +12,7 @@ impl fmt::Display for AppInternalError {
             3 => write!(f, "Bad model format: '{}'", self.txt),
             4 => write!(f, "Bad model version: '{}'", self.txt),
             5 => write!(f, "Bad tracker parameters: '{}'", self.txt),
+            6 => write!(f, "Bad image dimensions: '{}'", self.txt),
             _ => write!(f, "Undefined VideoCapture error")
         }
     }
@@ -22,9 +22,10 @@ impl fmt::Display for AppInternalError {
 pub enum AppError {
     Internal(AppInternalError),
     VideoError(video_capture::VideoCaptureError),
-    OpenCVError(opencv::Error),
+    ModelError(od_opencv::OrtModelError),
+    WindowError(minifb::Error),
+    SignalError(ctrlc::Error),
     TOMLError(toml::de::Error),
-    ZonesErrorInternal(zones_error::ZonesError),
 }
 
 impl From<AppInternalError> for AppError {
@@ -39,9 +40,9 @@ impl From<video_capture::VideoCaptureError> for AppError {
     }
 }
 
-impl From<opencv::Error> for AppError {
-    fn from(e: opencv::Error) -> Self {
-        AppError::OpenCVError(e)
+impl From<od_opencv::OrtModelError> for AppError {
+    fn from(e: od_opencv::OrtModelError) -> Self {
+        AppError::ModelError(e)
     }
 }
 
@@ -51,8 +52,14 @@ impl From<toml::de::Error> for AppError {
     }
 }
 
-impl From<zones_error::ZonesError> for AppError {
-    fn from(e: zones_error::ZonesError) -> Self {
-        AppError::ZonesErrorInternal(e)
+impl From<minifb::Error> for AppError {
+    fn from(e: minifb::Error) -> Self {
+        AppError::WindowError(e)
+    }
+}
+
+impl From<ctrlc::Error> for AppError {
+    fn from(e: ctrlc::Error) -> Self {
+        AppError::SignalError(e)
     }
 }
