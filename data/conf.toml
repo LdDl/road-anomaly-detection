@@ -26,6 +26,7 @@
     # Supported model format: "onnx"
     # Default is "onnx"
     network_format = "onnx"
+    # Conversion instructions for traditional Darknet weights: https://github.com/LdDl/darknet2onnx
     network_weights = "./data/best_nano.onnx"
     # The legacy "network_cfg" setting is unused with ONNX.
     # network_cfg = ""

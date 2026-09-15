@@ -121,7 +121,7 @@ The feature names are `ort-backend` and `ort-cuda`; `ort-cuda` also enables `ort
 
 Use an ONNX model with input named `images`, output named `output0`, and output layout `[1, 4 + number_of_classes, number_of_predictions]`, as used by YOLOv8/v9/v11. Set `net_width` and `net_height` to the model's input dimensions, and list `net_classes` in the same order as the model's classes.
 
-Traditional Darknet YOLOv3/v4/v7 models must be converted to ONNX with [darknet2onnx](https://github.com/LdDl/darknet2onnx) using `--format yolov8`. `.cfg` and `.weights` files cannot be loaded directly by this application.
+Traditional Darknet YOLOv3/v4/v7 models must be converted to ONNX using `--format yolov8`; follow the [darknet2onnx conversion instructions](https://github.com/LdDl/darknet2onnx). `.cfg` and `.weights` files cannot be loaded directly by this application.
 
 The example configuration uses two classes: "moderate_accident" and "severe_accident". Supply a model trained on these classes or update the class list for your model.
 
