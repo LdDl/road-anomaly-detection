@@ -49,7 +49,7 @@ impl PublisherTrait for RedisConnection {
         println!("Trying to send event: {}. Object ID: '{}'. Time: {}", event_id, object_id, chrono::Utc::now());
         let mut redis_conn = self.client.get_connection()?;
         let event_json_str = serde_json::to_string(event_info)?;
-        redis_conn.publish(self.channel_name.to_owned(), event_json_str)?;
+        redis_conn.publish::<_, _, usize>(self.channel_name.to_owned(), event_json_str)?;
         println!("Success for sending event: '{}'. Object ID: '{}'. Time: {}", event_id, object_id, chrono::Utc::now());
         Ok(())
     }

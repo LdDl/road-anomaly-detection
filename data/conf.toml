@@ -12,7 +12,7 @@
     # typ = "device"
 
 [output]
-    # Define attributes for imshow() if needed
+    # Define attributes for the preview window if needed
     enable = true
     width = 1024
     height = 720
@@ -20,14 +20,15 @@
 
 
 [detection]
-    # Available model_versions: v3, v4, v7, v8
-    # Default is v3
+    # Optional model version: v3, v4, v7, v8, v9, v11
+    # Traditional models must be converted to ONNX with YOLOv8 output layout
     network_ver = 8
-    # Available model formats: "darknet", "onnx"
-    # Default is "darknet"
+    # Supported model format: "onnx"
+    # Default is "onnx"
     network_format = "onnx"
+    # Conversion instructions for traditional Darknet weights: https://github.com/LdDl/darknet2onnx
     network_weights = "./data/best_nano.onnx"
-    # Leave 'network_cfg' empty if using ONNX.
+    # The legacy "network_cfg" setting is unused with ONNX.
     # network_cfg = ""
     conf_threshold = 0.8
     nms_threshold = 0.4
