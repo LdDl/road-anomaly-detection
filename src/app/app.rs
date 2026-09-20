@@ -234,7 +234,7 @@ fn report_cuda_provider() {
         Ok(()) => println!("CUDA execution provider is registered: inference runs on GPU"),
         Err(err) => {
             eprintln!("CUDA execution provider is NOT available, inference falls back to CPU: {err}");
-            eprintln!("Hint: the directory of the provider libraries is taken from argv[0], so the binary has to be started by its path, e.g. /usr/local/bin/road-anomaly-detector, and libonnxruntime_providers_cuda.so and libonnxruntime_providers_shared.so have to lie in that same directory");
+            eprintln!("Hint: libonnxruntime_providers_cuda.so and libonnxruntime_providers_shared.so are looked up in the directory of argv[0], so the binary has to be started by its path, e.g. /usr/local/bin/road-anomaly-detector; a missing libcudart, libcublasLt or libcudnn in the error above instead means that the CUDA of the environment does not match the one the libraries were built for, which ORT_CUDA_VERSION=12 or 13 selects at build time");
         }
     }
 }
