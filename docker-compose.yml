@@ -1,0 +1,70 @@
+# Example deployment: the image only provides the CUDA runtime, while the executable itself comes
+# from the host. The file is expected to live next to its configuration, the model and the video,
+# for example in /var/microservices/road_accidents_detection.
+#
+# After `cargo build --release --locked --features ort-cuda` three files have to be copied into
+# /usr/local/bin, and they have to stay in one directory: ONNX Runtime builds the path of the
+# provider libraries from argv[0], so neither /usr/local/lib nor LD_LIBRARY_PATH is looked at, and
+# the binary has to be started by its path and not by its name alone - started as
+# `road-anomaly-detector` through PATH, the libraries are searched for in the current directory.
+# In target/release the libraries are symlinks into ~/.cache, hence the dereferencing copy:
+#
+#   sudo install -m 0755 target/release/road-anomaly-detector /usr/local/bin/
+#   sudo cp -L target/release/libonnxruntime_providers_cuda.so \
+#              target/release/libonnxruntime_providers_shared.so /usr/local/bin/
+#
+# The same reason keeps all three mounted next to each other below. Placing the executable into
+# /usr/local/bin as a symlink to some other directory breaks the CUDA provider.
+#
+# The image has to match the CUDA version that the build of ONNX Runtime expects: the `ort` crate
+# picks its flavour from the CUDA toolkit of the build machine, or from ORT_CUDA_VERSION=12 or 13.
+# `ldd libonnxruntime_providers_cuda.so | grep cudart` tells which one ended up in /usr/local/bin.
+#
+# The host needs the NVIDIA Container Toolkit with the runtime registered in the docker daemon:
+#   sudo nvidia-ctk runtime configure --runtime=docker && sudo systemctl restart docker
+#   docker info | grep -i runtimes
+#   docker run --rm --gpus all nvidia/cuda:13.0.3-base-ubuntu24.04 nvidia-smi
+#
+# ffmpeg and ffprobe are run by the application as processes, and the package of the host is of no
+# use inside the container: it is dynamically linked against the libraries of the host. They are
+# installed into the image instead.
+#
+# The executable links against the glibc of the machine it was built on, and ubuntu24.04 carries
+# glibc 2.39; a build made on a newer system does not start in this image.
+services:
+  road_accidents_detection:
+    # The image adds nothing but ffmpeg to the CUDA runtime: the application itself is mounted from
+    # the host. `docker compose up -d --build` builds it once.
+    image: road-accidents-detection:cu13-ffmpeg
+    build:
+      dockerfile_inline: |
+        FROM nvidia/cuda:13.0.3-cudnn-runtime-ubuntu24.04
+        RUN apt-get update \
+         && apt-get install -y --no-install-recommends ffmpeg \
+         && rm -rf /var/lib/apt/lists/*
+    container_name: road_accidents_detection
+    restart: unless-stopped
+    # the cameras and Valkey/Redis are reached from the host network without any port publishing
+    network_mode: host
+    working_dir: /app
+    command: ["/usr/local/bin/road-anomaly-detector", "/app/conf.toml"]
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    volumes:
+      - /usr/local/bin/road-anomaly-detector:/usr/local/bin/road-anomaly-detector:ro
+      # the provider libraries are loaded from the directory of the executable and nowhere else
+      - /usr/local/bin/libonnxruntime_providers_cuda.so:/usr/local/bin/libonnxruntime_providers_cuda.so:ro
+      - /usr/local/bin/libonnxruntime_providers_shared.so:/usr/local/bin/libonnxruntime_providers_shared.so:ro
+      # conf.toml: video_src = "/app/cctv_example.mp4", network_weights = "/app/best_small608.onnx",
+      # output.enable = false, Redis host = "127.0.0.1"
+      - /var/microservices/road_accidents_detection/conf.toml:/app/conf.toml:ro
+      - /var/microservices/road_accidents_detection/best_small608.onnx:/app/best_small608.onnx:ro
+      - /var/microservices/road_accidents_detection/cctv_example.mp4:/app/cctv_example.mp4:ro
