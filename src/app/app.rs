@@ -234,7 +234,7 @@ fn report_cuda_provider() {
         Ok(()) => println!("CUDA execution provider is registered: inference runs on GPU"),
         Err(err) => {
             eprintln!("CUDA execution provider is NOT available, inference falls back to CPU: {err}");
-            eprintln!("Hint: libonnxruntime_providers_cuda.so and libonnxruntime_providers_shared.so must be placed next to the executable");
+            eprintln!("Hint: the directory of the provider libraries is taken from argv[0], so the binary has to be started by its path, e.g. /usr/local/bin/road-anomaly-detector, and libonnxruntime_providers_cuda.so and libonnxruntime_providers_shared.so have to lie in that same directory");
         }
     }
 }
