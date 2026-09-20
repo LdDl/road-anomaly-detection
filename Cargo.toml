@@ -12,7 +12,7 @@ path = "src/main.rs"
 [features]
 default = ["ort-backend"]
 ort-backend = ["od_opencv/ort-backend"]
-ort-cuda = ["ort-backend", "od_opencv/ort-cuda-backend"]
+ort-cuda = ["ort-backend", "od_opencv/ort-cuda-backend", "ort/cuda"]
 
 [dependencies]
 toml = "0.5"

@@ -205,11 +205,38 @@ impl App {
 fn prepare_neural_net(weights: &str, net_size: (i32, i32)) -> Result<ModelUltralyticsOrt, AppError> {
     let net_size = (net_size.0 as u32, net_size.1 as u32);
     #[cfg(feature = "ort-cuda")]
+    report_cuda_provider();
+    #[cfg(feature = "ort-cuda")]
     let neural_net = Model::ort_cuda(weights, net_size)?;
     #[cfg(not(feature = "ort-cuda"))]
     let neural_net = Model::ort(weights, net_size)?;
     println!("Model backend is ONNX Runtime");
     Ok(neural_net)
+}
+
+/// Registration of the CUDA execution provider is silent by default: ONNX Runtime falls back to
+/// the CPU without any message. Register it once with `error_on_failure` to learn whether the
+/// session built later actually runs on the GPU. Only the session options are created here, so no
+/// model is loaded and the check is cheap.
+#[cfg(feature = "ort-cuda")]
+fn report_cuda_provider() {
+    use ort::execution_providers::CUDAExecutionProvider;
+    use ort::session::Session;
+
+    let probe = match Session::builder() {
+        Ok(builder) => builder
+            .with_execution_providers([CUDAExecutionProvider::default().build().error_on_failure()])
+            .map(|_| ())
+            .map_err(|err| err.to_string()),
+        Err(err) => Err(err.to_string()),
+    };
+    match probe {
+        Ok(()) => println!("CUDA execution provider is registered: inference runs on GPU"),
+        Err(err) => {
+            eprintln!("CUDA execution provider is NOT available, inference falls back to CPU: {err}");
+            eprintln!("Hint: libonnxruntime_providers_cuda.so and libonnxruntime_providers_shared.so must be placed next to the executable");
+        }
+    }
 }
 
 fn events_processing(events_reciever: mpsc::Receiver<EventInfo>, publishers: Vec<Box<dyn PublisherTrait>>) {
