@@ -1,4 +1,4 @@
-// Adapted from face_slop, originally based on rust-road-traffic-ui.
+// Originally based on rust-road-traffic-ui. See the ref.: https://github.com/LdDl/rust-road-traffic-ui
 import { Control, util, Point } from 'fabric';
 import type { TPointerEvent, Transform, TMat2D } from 'fabric';
 import type { Polygon } from 'fabric';

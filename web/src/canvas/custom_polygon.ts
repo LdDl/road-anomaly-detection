@@ -1,4 +1,4 @@
-// Adapted from face_slop, originally based on rust-road-traffic-ui.
+// Originally based on rust-road-traffic-ui. See the ref.: https://github.com/LdDl/rust-road-traffic-ui
 import { Polygon, FabricText, Shadow, util, type Canvas } from 'fabric';
 import { createVertexControls } from './custom_control';
 
