@@ -210,12 +210,14 @@ impl App {
                     };
                 }
             }
+            if window.is_some() || self.api_state.as_ref().map_or(false, |state| state.frames.receiver_count() > 0) {
+                draw_bboxes(&mut frame, &tracker, bbox_scalar, bbox_scalar_inverse);
+                draw_identifiers(&mut frame, &tracker, id_scalar, id_scalar_inverse);
+            }
             if let Some(state) = &self.api_state {
                 state.publish_frame(&frame);
             }
             if let Some(window) = window.as_mut() {
-                draw_bboxes(&mut frame, &tracker, bbox_scalar, bbox_scalar_inverse);
-                draw_identifiers(&mut frame, &tracker, id_scalar, id_scalar_inverse);
                 for zone in zones.iter() {
                     zone.draw(&mut frame);
                 }

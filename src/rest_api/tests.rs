@@ -44,6 +44,94 @@ fn zone() -> ZoneSettings {
     }
 }
 
+const COMMENTED_ZONES: &str = "\
+# Settings above the zones
+[input]
+    video_src = 'camera.mp4'
+
+# Zone notes
+[[zones]] # Camera entrance
+    # Stable identifier
+    id  = 'zone_test' # Keep this note
+    geometry = [
+        [1_0, 10], # Point A
+        [200, 10],
+        [200, 200], # Point C
+        [10, 200],
+    ] # Image coordinates
+    color_rgb = [255, 175, 243] # Pink
+    custom_note = 'Keep unknown fields'
+
+# Settings below the zones
+[publishers.redis]
+    host = 'localhost' # Redis host
+";
+
+#[actix_web::test]
+async fn saving_unchanged_zones_preserves_the_document_exactly() {
+    let updated = config::update_document(COMMENTED_ZONES, &Some(vec![zone()])).unwrap();
+    assert_eq!(updated, COMMENTED_ZONES);
+    let original = include_str!("../../data/conf.toml");
+    let settings: AppSettings = toml::from_str(original).unwrap();
+    assert_eq!(config::update_document(original, &settings.zones).unwrap(), original);
+}
+
+#[actix_web::test]
+async fn editing_coordinates_keeps_comments_and_array_formatting() {
+    let mut changed = zone();
+    changed.geometry[2][0] = 190;
+    changed.color_rgb = Some([255, 175, 240]);
+    let updated = config::update_document(COMMENTED_ZONES, &Some(vec![changed.clone()])).unwrap();
+    assert_eq!(updated, COMMENTED_ZONES.replace("[200, 200]", "[190, 200]").replace("[255, 175, 243]", "[255, 175, 240]"));
+    let parsed: toml::Value = toml::from_str(&updated).unwrap();
+    let saved: Vec<ZoneSettings> = parsed["zones"].clone().try_into().unwrap();
+    assert_eq!(saved, vec![changed]);
+}
+
+#[actix_web::test]
+async fn renaming_and_adding_zones_keeps_the_section_position_and_indent() {
+    let mut renamed = zone();
+    renamed.id = "entrance".to_string();
+    let mut added = zone();
+    added.id = "exit".to_string();
+    let updated = config::update_document(COMMENTED_ZONES, &Some(vec![renamed, added])).unwrap();
+    assert!(updated.contains("    id  = \"entrance\" # Keep this note"), "{updated}");
+    assert!(updated.contains("\n[[zones]]\n    id = \"exit\"\n    geometry = "), "{updated}");
+    assert_eq!(updated.matches("# Camera entrance").count(), 1);
+    assert_eq!(updated.matches("# Zone notes").count(), 1);
+    assert!(updated.rfind("[[zones]]").unwrap() < updated.find("[publishers.redis]").unwrap());
+    assert!(updated.ends_with("# Settings below the zones\n[publishers.redis]\n    host = 'localhost' # Redis host\n"));
+    toml::from_str::<toml::Value>(&updated).unwrap();
+}
+
+#[actix_web::test]
+async fn deleting_and_reordering_zones_keeps_comments_with_their_ids() {
+    let second = "\n# Exit notes\n[[zones]]\n    id = 'exit'\n    geometry = [[10, 10], [200, 10], [200, 200], [10, 200]]\n    color_rgb = [255, 175, 243]\n";
+    let original = COMMENTED_ZONES.replace("\n# Settings below the zones", &format!("{}\n# Settings below the zones", second));
+    let mut exit = zone();
+    exit.id = "exit".to_string();
+    let deleted = config::update_document(&original, &Some(vec![exit.clone()])).unwrap();
+    assert!(deleted.contains(second), "{deleted}");
+    assert!(!deleted.contains("# Camera entrance"));
+    let reordered = config::update_document(&original, &Some(vec![exit, zone()])).unwrap();
+    assert!(reordered.find("# Exit notes").unwrap() < reordered.find("# Zone notes").unwrap());
+    assert_eq!(reordered.matches("# Camera entrance").count(), 1);
+    let parsed: toml::Value = toml::from_str(&reordered).unwrap();
+    assert_eq!(parsed["zones"][0]["id"].as_str(), Some("exit"));
+    assert_eq!(parsed["zones"][1]["id"].as_str(), Some("zone_test"));
+}
+
+#[actix_web::test]
+async fn clearing_and_restoring_optional_color_keeps_neighbouring_fields() {
+    let mut uncolored = zone();
+    uncolored.color_rgb = None;
+    let without_color = config::update_document(COMMENTED_ZONES, &Some(vec![uncolored])).unwrap();
+    assert_eq!(without_color, COMMENTED_ZONES.replace("    color_rgb = [255, 175, 243] # Pink\n", ""));
+    let restored = config::update_document(&without_color, &Some(vec![zone()])).unwrap();
+    assert!(restored.contains("    color_rgb = [255, 175, 243]\n"), "{restored}");
+    assert!(restored.contains("    custom_note = 'Keep unknown fields'"));
+}
+
 #[actix_web::test]
 async fn rejects_invalid_geometry_and_duplicate_ids() {
     let valid = zone();
