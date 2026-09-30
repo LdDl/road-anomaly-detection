@@ -1,7 +1,7 @@
 use crate::frame::RawFrame;
 use std::fmt;
-use std::io::{self, Read};
-use std::process::{Child, ChildStdout, Command, Stdio};
+use std::io::{self, BufRead, BufReader, Read, Write};
+use std::process::{Child, ChildStderr, ChildStdout, Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -178,14 +178,19 @@ pub fn get_video_capture(video_src: &str, typ: String) -> Result<VideoCapture, V
         let fps = parse_frame_rate(stream["r_frame_rate"].as_str().unwrap_or("30/1"));
         command = Command::new("ffmpeg");
         configure_input(&mut command, &source);
-        command.args(["-nostdin", "-v", "error", "-i", &source, "-map", "0:v:0", "-an", "-sn", "-dn", "-fps_mode", "passthrough", "-f", "rawvideo", "-pix_fmt", "bgr24", "pipe:1"]);
+        // Keep repeated messages separate so each one can be filtered from stderr.
+        command.args(["-nostdin", "-v", "repeat+error", "-i", &source, "-map", "0:v:0", "-an", "-sn", "-dn", "-fps_mode", "passthrough", "-f", "rawvideo", "-pix_fmt", "bgr24", "pipe:1"]);
         (width, height, fps)
     };
     let row_stride = if gstreamer { (width as usize * 3 + 3) & !3 } else { width as usize * 3 };
     if width == 0 || height == 0 || width > i32::MAX as u32 || height > i32::MAX as u32 || row_stride.checked_mul(height as usize).is_none() {
         return Err(VideoCaptureInternalError{typ: 2, txt: format!("Invalid video dimensions: {}x{}", width, height)}.into());
     }
-    let mut child = command.stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::inherit()).spawn()?;
+    let stderr = if gstreamer { Stdio::inherit() } else { Stdio::piped() };
+    let mut child = command.stdin(Stdio::null()).stdout(Stdio::piped()).stderr(stderr).spawn()?;
+    if let Some(stderr) = child.stderr.take() {
+        thread::spawn(move || forward_ffmpeg_stderr(stderr));
+    }
     let stdout = child.stdout.take().expect("Video capture stdout is not piped");
     Ok(VideoCapture {
         process: VideoCaptureProcess{child: Arc::new(Mutex::new(child))},
@@ -195,6 +200,29 @@ pub fn get_video_capture(video_src: &str, typ: String) -> Result<VideoCapture, V
         fps,
         row_stride,
     })
+}
+
+fn forward_ffmpeg_stderr(stderr: ChildStderr) {
+    let mut reader = BufReader::new(stderr);
+    let mut line = Vec::new();
+    loop {
+        line.clear();
+        match reader.read_until(b'\n', &mut line) {
+            Ok(0) => break,
+            Ok(_) => {},
+            Err(err) if err.kind() == io::ErrorKind::Interrupted => continue,
+            Err(err) => {
+                eprintln!("Can't read FFmpeg stderr: {}", err);
+                break;
+            }
+        }
+        let message = String::from_utf8_lossy(&line);
+        if message.contains("Application provided invalid, non monotonically increasing dts to muxer in stream ") ||
+            (message.contains("non-existing SPS ") && message.contains(" referenced in buffering period")) {
+            continue;
+        }
+        let _ = io::stderr().write_all(&line);
+    }
 }
 
 fn configure_input(command: &mut Command, source: &str) {
