@@ -1,6 +1,6 @@
 # Yet another toy utility for registering anomaly situations on roads
 
-In W.I.P. stage
+<img src="web/public/lucy-camera.svg" alt="Lucy holding a surveillance camera" width="160">
 
 ## Table of Contents
 
@@ -10,6 +10,7 @@ In W.I.P. stage
 - [Screenshots](#screenshots)
 - [Installation and usage](#installation-and-usage)
 - [Configuration](#configuration)
+- [Web zone editor and REST API](#web-zone-editor-and-rest-api)
 - [Published events](#published-events)
 - [Future works](#future-works)
 - [References](#references)
@@ -66,6 +67,18 @@ The current parameters are set in code:
 The model update and defaults follow the [MOG2 reference implementation](https://github.com/opencv/opencv/blob/4.x/modules/video/src/bgfg_gaussmix2.cpp). This implementation handles BGR24 frames without shadow detection. Numerical equivalence and performance against the original version have not been measured.
 
 ## Screenshots
+
+### Web configurator
+
+Zone editor with the video preview unavailable:
+
+<img src="docs/ui_showcase_empty_preview.png" alt="Web zone editor with saved zones and an unavailable video preview" width="1080">
+
+Live preview with configured zones, a detected object's bounding box and its tracking ID:
+
+<img src="docs/ui_showcase_got_detection.png" alt="Web zone editor showing a detected object and its tracking ID over the live video" width="1080">
+
+### Original version
 
 These screenshots were captured with the original version. The current preview uses `minifb` and Rust drawing primitives, so its appearance could differ.
 
@@ -175,6 +188,36 @@ To observe events with the example settings, subscribe in another terminal befor
 redis-cli -h localhost -p 6379 SUBSCRIBE ROAD_ANOMALY_DETECTION
 ```
 
+## Web zone editor and REST API
+
+The optional web interface edits zones over an MJPEG preview. Its light theme follows [killmestats](https://github.com/andrew-pavlov-ua/killmestats), using the [Gleam palette](https://gleam.run/branding/). What about i18n? English is the default language; the header offers an English/Russian selector and remembers your choice in this browser. Detection and tracking settings remain in TOML.
+
+Build the static interface once with Node.js (in my case it is v22) and npm:
+
+```bash
+cd web
+npm ci
+npm run build
+cd ..
+```
+
+Enable the server in your configuration, then rebuild and start the detector as usual:
+
+```toml
+[rest_api]
+enable = true
+host = "127.0.0.1"
+port = 44001
+web_ui_dir = "./web/dist"
+preview_fps = 5
+```
+
+Open `http://127.0.0.1:44001`. Draw four vertices along the boundary of a zone; use the right mouse button or the edit button to move vertices. "Apply" applies the draft on the next processed frame. "Save to TOML" also writes it to the original configuration, creating a backup and preserving unrelated sections and comments. Saving requires write access to the configuration directory. The web server is disabled if `[rest_api]` is omitted.
+
+Each detector instance has its own API port and configuration. Deploy `web/dist` alongside the binary and configure its path; Node.js is only needed to build these files. With Docker, mount the configuration directory writable, as shown in [docker-compose.yml](docker-compose.yml). The API has no authentication, so keep the default loopback binding and use an SSH tunnel, or place it behind an authenticated proxy.
+
+The running server publishes an OpenAPI specification at `/api-docs/openapi.json`.
+
 ## Published events
 
 Each message is a JSON object. The image value below is a placeholder for the Base64-encoded PNG:
@@ -225,8 +268,6 @@ Bounding boxes and center points use original frame pixel coordinates, with the 
 
 ## Future works
 
-* Make REST API to extract and to mutate configuration;
-* Make MJPEG export;
 * Make publishing to custom REST API via POST request;
 * Prepare some pre-trained neural networks;
 

@@ -52,6 +52,8 @@ impl App {
 
         let (tx_capture, rx_capture): (mpsc::SyncSender<ThreadedFrame>, mpsc::Receiver<ThreadedFrame>) = mpsc::sync_channel(0);
         thread::spawn(move || {
+            // syntethic delay
+            // std::thread::sleep(std::time::Duration::from_millis(1000));
             let mut frames_counter: f32 = 0.0;
             let mut total_seconds: f32 = 0.0;
             let mut overall_seconds: f32 = 0.0;
@@ -208,12 +210,14 @@ impl App {
                     };
                 }
             }
+            if window.is_some() || self.api_state.as_ref().map_or(false, |state| state.frames.receiver_count() > 0) {
+                draw_bboxes(&mut frame, &tracker, bbox_scalar, bbox_scalar_inverse);
+                draw_identifiers(&mut frame, &tracker, id_scalar, id_scalar_inverse);
+            }
             if let Some(state) = &self.api_state {
                 state.publish_frame(&frame);
             }
             if let Some(window) = window.as_mut() {
-                draw_bboxes(&mut frame, &tracker, bbox_scalar, bbox_scalar_inverse);
-                draw_identifiers(&mut frame, &tracker, id_scalar, id_scalar_inverse);
                 for zone in zones.iter() {
                     zone.draw(&mut frame);
                 }

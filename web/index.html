@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#fffbe8" />
+    <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
+    <link rel="icon" href="/lucy-camera.svg" type="image/svg+xml" sizes="any" />
+    <title>Zone editor · Road anomaly detector</title>
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="Road anomaly detector"><img class="brand-logo" src="/lucy-camera.svg" width="48" height="48" alt="" /><span>ROAD ANOMALY DETECTOR<span class="brand-sub" data-i18n="configurator">Configurator</span></span></a>
+        <div class="header-actions"><div class="language-picker">
+          <span class="language-label" id="language-label" data-i18n="language">Language</span>
+          <button id="language" class="language-trigger" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="language-menu" aria-labelledby="language-label language-value"><span id="language-value" lang="en">English</span><span class="language-chevron" aria-hidden="true">⌄</span></button>
+          <div id="language-menu" class="language-menu" role="menu" aria-labelledby="language-label" hidden>
+            <button type="button" class="language-option" role="menuitemradio" aria-checked="true" data-language="en" tabindex="-1"><span class="language-code" aria-hidden="true">EN</span><span lang="en">English</span><span class="language-check" aria-hidden="true">✓</span></button>
+            <button type="button" class="language-option" role="menuitemradio" aria-checked="false" data-language="ru" tabindex="-1"><span class="language-code" aria-hidden="true">RU</span><span lang="ru">Русский</span><span class="language-check" aria-hidden="true">✓</span></button>
+          </div>
+        </div><div class="connection"><span id="status-dot" class="dot"></span><span id="connection" data-i18n="connecting">Connecting</span></div>
+        <a class="api-link" href="/api-docs/openapi.json" target="_blank" rel="noopener"><span data-i18n="openApiDescription">OpenAPI description</span> ↗</a></div>
+      </header>
+      <main>
+        <section class="page-heading">
+          <div><h1><span data-i18n="heading">Define your</span> <span class="heading-accent" data-i18n="headingAccent">zones.</span></h1><p class="subtitle" data-i18n="subtitle">Mark the areas of the road where events should be detected.</p></div>
+          <div class="save-actions"><span id="save-state" role="status" data-i18n="loading">Loading zones</span><div><button id="reload" class="button subtle" disabled data-i18n="reload">Reload</button><button id="apply" class="button secondary" disabled data-i18n="apply">Apply</button><button id="save" class="button primary" disabled><span data-i18n="save">Save to TOML</span> <span aria-hidden="true">↗</span></button></div></div>
+        </section>
+        <div id="notice" class="notice" role="status" hidden></div>
+        <div class="workspace">
+          <aside class="panel zones-panel">
+            <div class="panel-heading"><div><span class="eyebrow" data-i18n="detectionAreas">DETECTION AREAS</span><h2><span data-i18n="zones">Zones</span> <span id="zone-count" class="count">0</span></h2></div><span class="panel-number" aria-hidden="true">01</span></div>
+            <button id="add-zone" class="button primary full" disabled><span aria-hidden="true">＋</span> <span data-i18n="draw">Draw a zone</span></button>
+            <label class="whole-frame"><input id="whole-frame" type="checkbox" disabled /><span><span data-i18n="wholeFrame">Whole frame</span><small data-i18n="defaultArea">Default detection area</small></span></label>
+            <div id="zone-list" class="zone-list" aria-label="Zones" data-i18n-label="zones"></div>
+            <section id="zone-editor" class="zone-editor" hidden>
+              <p class="eyebrow" data-i18n="selectedZone">SELECTED ZONE</p>
+              <label class="field"><span data-i18n="identifier">Identifier</span><input id="zone-id" type="text" maxlength="128" autocomplete="off" spellcheck="false" /></label>
+              <label class="color-field"><span data-i18n="outlineColor">Outline color</span><input id="zone-color" type="color" value="#ffaff3" /></label>
+              <div id="coordinates" class="coordinates"></div>
+              <div class="editor-actions"><button id="edit-zone" class="button secondary" data-i18n="edit">Edit vertices</button><button id="delete-zone" class="button danger" aria-label="Delete selected zone" data-i18n-label="deleteLabel" data-i18n="delete">Delete</button></div>
+            </section>
+            <div class="sidebar-note"><span>01 / 02 / 03 / 04</span><p><span data-i18n="fourPoints">Four points along the boundary.</span><br /><span data-i18n="oneZone">One zone for the area you need.</span></p></div>
+          </aside>
+          <section class="panel video-panel">
+            <div class="video-heading"><div><span id="stream-badge" class="stream-badge" data-i18n="waiting">WAITING</span><h2 data-i18n="sourceFrame">Source frame</h2></div><span id="dimensions" class="mono" data-i18n="noDimensions">no data</span></div>
+            <div id="video-well" class="video-well">
+              <div id="video-placeholder" class="video-placeholder"><div class="preview-symbol" aria-hidden="true"><span></span></div><h3 id="preview-title" data-i18n="waitingFrame">Waiting for the first frame</h3><p id="preview-description" data-i18n="waitingDescription">Video will appear when the detector starts processing.</p></div>
+              <div id="stage" class="stage" hidden><img id="stream" alt="Video preview for editing detection zones" data-i18n-alt="previewAlt" draggable="false" /><canvas id="zone-canvas" aria-label="Zone editor. Click four points on the frame to create a zone." data-i18n-label="canvasLabel"></canvas></div>
+            </div>
+            <div class="canvas-toolbar"><p id="canvas-hint" data-i18n="canvasHint">Select a zone or draw a new one.</p><button id="cancel-draw" class="button subtle small" hidden data-i18n="cancel">Cancel · Esc</button><span class="key-hint" data-i18n="rightClick">Right-click: edit vertices</span></div>
+            <div class="video-footer"><div><span class="eyebrow" data-i18n="identifier">Identifier</span><p id="equipment-id" data-i18n="connectingDetector">Connecting to the detector</p></div><div class="frame-counter"><span class="eyebrow" data-i18n="frames">PROCESSED FRAMES</span><p id="frame-count" class="mono">0</p></div></div>
+          </section>
+        </div>
+        <footer class="page-footer"><span data-i18n="footer">Zone changes take effect without restarting the detector.</span><a href="https://gleam.run/branding/" target="_blank" rel="noopener"><span data-i18n="palette">Palette inspired by Gleam</span> ↗</a></footer>
+      </main>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

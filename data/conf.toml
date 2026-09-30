@@ -2,6 +2,16 @@
     # Just field for future identification of application. Could be any string.
     id = "My-fancy-road-anomaly-detection-software"
 
+[rest_api]
+    # Enable the web zone editor and REST API. Each instance needs a different port.
+    enable = true
+    host = "127.0.0.1"
+    port = 44001
+    # Build the interface with: cd web && npm ci && npm run build
+    web_ui_dir = "./web/dist"
+    # JPEG preview frame rate, from 1 to 30. Detection keeps its own processing rate.
+    preview_fps = 5
+
 [input]
     # Source URL of video: https://www.youtube.com/watch?v=z60Y20kJSmc
     video_src = "./data/tests/cctv_example.mp4"
@@ -13,7 +23,7 @@
 
 [output]
     # Define attributes for the preview window if needed
-    enable = true
+    enable = false
     width = 1024
     height = 720
     window_name = "Road anomaly detector"
