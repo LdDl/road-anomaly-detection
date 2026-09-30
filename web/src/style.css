@@ -31,7 +31,8 @@ a { color: inherit; text-decoration: none; }
 [hidden] { display: none !important; }
 h1, h2, h3, p { margin: 0; }
 .topbar { max-width: 1320px; min-height: 100px; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 24px 32px; margin: auto; border-bottom: 1px solid var(--line); }
-.brand { font-weight: 900; font-size: 24px; letter-spacing: -.8px; flex-shrink: 0; }
+.brand { display: flex; align-items: center; gap: 12px; font-weight: 900; font-size: 24px; letter-spacing: -.8px; min-width: 0; }
+.brand-logo { width: 48px; height: 48px; object-fit: contain; flex-shrink: 0; }
 .brand-sub { display: block; font: 9px var(--mono); color: var(--muted); letter-spacing: 1.8px; margin-top: 3px; }
 .header-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
 .language-picker { position: relative; display: flex; align-items: center; gap: 8px; font: 11px var(--mono); font-weight: 700; }
@@ -157,7 +158,7 @@ input[type=color] { width: 42px; height: 30px; padding: 2px; background: white; 
 }
 @media (max-width: 760px) {
   .topbar { padding: 20px; flex-wrap: wrap; gap: 18px; }
-  .brand { font-size: 22px; }
+  .brand { font-size: clamp(16px, 4vw, 22px); }
   .header-actions { gap: 10px; justify-content: flex-start; }
   .language-menu { left: 0; right: auto; }
   .connection, .api-link { font-size: 9px; padding: 7px 9px; }

@@ -11,3 +11,5 @@ MJPEG preview uses a frame reader adapted from the same UI (mentioned above) ins
 The light theme follows the cream background, typography, outlined cards and offset shadows of [killmestats](https://github.com/andrew-pavlov-ua/killmestats/tree/master/client), using the [official Gleam color palette](https://gleam.run/branding/). This project is not an official Gleam product. Assets are served locally; no third-party scripts or fonts are loaded by the interface.
 
 English is the default UI language. It has also Russian as a supported language. The choice is stored locally in the browser. UI translations live in `src/i18n.ts`, including status messages, confirmations and accessible labels.
+
+The header logo and SVG favicon use `public/lucy-camera.svg`, a camera variant of [Lucy, Gleam's mascot](https://gleam.run/branding/). The SVG uses vector paths with a simplified flat palette. PNG concept is preserved in `../docs/branding/lucy-camera.png`. And then `public/favicon.ico` provides 16, 32 and 48 pixel versions for browsers using ICO icons.
