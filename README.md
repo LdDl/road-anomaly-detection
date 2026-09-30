@@ -119,11 +119,13 @@ The feature names are `ort-backend` and `ort-cuda`; `ort-cuda` also enables `ort
 
 ### Model
 
+Download `best_small608.onnx` from the [v0.1.0 release](https://github.com/LdDl/road-anomaly-detection/releases/tag/v0.1.0).
+
 Use an ONNX model with input named `images`, output named `output0`, and output layout `[1, 4 + number_of_classes, number_of_predictions]`, as used by YOLOv8/v9/v11. Set `net_width` and `net_height` to the model's input dimensions, and list `net_classes` in the same order as the model's classes.
 
 Traditional Darknet YOLOv3/v4/v7 models must be converted to ONNX using `--format yolov8`; follow the [darknet2onnx conversion instructions](https://github.com/LdDl/darknet2onnx). `.cfg` and `.weights` files cannot be loaded directly by this application.
 
-The example configuration uses two classes: "moderate_accident" and "severe_accident". Supply a model trained on these classes or update the class list for your model.
+In my setup, I use two classes: "moderate_accident" and "severe_accident". The supplied weights work for my specific video example in [data/conf.toml](data/conf.toml); they are not a general-purpose road anomaly detection model. Your use case may require different weights and classes. Adjust the model path, input dimensions and class list to match your own model.
 
 ### Run
 
@@ -228,7 +230,6 @@ Bounding boxes and center points use original frame pixel coordinates, with the 
 * Make REST API to extract and to mutate configuration;
 * Make MJPEG export;
 * Make publishing to custom REST API via POST request;
-* Prepare some pre-trained neural networks;
 
 ## References
 
