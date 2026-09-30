@@ -27,6 +27,7 @@ pub struct App {
     pub tracking: app_settings::TrackingSettings,
     pub zones_settings: Option<Vec<app_settings::ZoneSettings>>,
     pub publishers: Option<app_settings::PublishersSettings>,
+    pub api_state: Option<Arc<crate::rest_api::ApiState>>,
 }
 
 impl App {
@@ -36,6 +37,9 @@ impl App {
         let mut video_capture = video_capture::get_video_capture(self.input.video_source.as_str(), self.input.video_source_typ.clone())?;
         let (width, height, fps) = (video_capture.width as f32, video_capture.height as f32, video_capture.fps);
         println!("Video probe: {{Width: {width}px | Height: {height}px | FPS: {fps}}}");
+        if let Some(state) = &self.api_state {
+            state.set_video_info(width as u32, height as u32, fps);
+        }
 
         let capture_process = video_capture.process();
         let signal_capture = video_capture.process();
@@ -117,6 +121,7 @@ impl App {
             }
             None => vec![Zone::new("whole_image".to_string(), [[5, 5], [width as i32 - 5, 5], [width as i32 - 5, height as i32 - 5], [5, height as i32 - 5]], Some([0, 0, 255]))]
         };
+        let mut zones_revision = 0;
         
         // Init publishers
         let (events_sender, events_reciever): (mpsc::SyncSender<EventInfo>, mpsc::Receiver<EventInfo>) = mpsc::sync_channel(0);
@@ -157,6 +162,26 @@ impl App {
                 break;
             }
             let mut frame = received.frame;
+            if let Some(state) = &self.api_state {
+                if let Some((revision, settings)) = state.zones_since(zones_revision) {
+                    let mut previous_zones = std::mem::take(&mut zones);
+                    zones = match &settings {
+                        Some(configured) => configured.iter().map(|zone_settings| {
+                            let unchanged = self.zones_settings.as_ref().map_or(false, |old| old.contains(zone_settings));
+                            if unchanged {
+                                if let Some(index) = previous_zones.iter().position(|zone| zone.id == zone_settings.id) {
+                                    return previous_zones.remove(index);
+                                }
+                            }
+                            Zone::new(zone_settings.id.clone(), zone_settings.geometry, zone_settings.color_rgb)
+                        }).collect(),
+                        None => vec![Zone::new("whole_image".to_string(), [[5, 5], [width as i32 - 5, 5], [width as i32 - 5, height as i32 - 5], [5, height as i32 - 5]], Some([0, 0, 255]))],
+                    };
+                    self.zones_settings = settings;
+                    zones_revision = revision;
+                    state.mark_applied(revision);
+                }
+            }
             // Run MOG2 at the network resolution before passing its background to YOLO.
             let resized_frame_for_bg = frame.resize(self.detection.net_width as u32, self.detection.net_height as u32);
             let frame_background = bg_subtractor.apply(&resized_frame_for_bg);
@@ -182,6 +207,9 @@ impl App {
                         }
                     };
                 }
+            }
+            if let Some(state) = &self.api_state {
+                state.publish_frame(&frame);
             }
             if let Some(window) = window.as_mut() {
                 draw_bboxes(&mut frame, &tracker, bbox_scalar, bbox_scalar_inverse);

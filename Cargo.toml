@@ -25,7 +25,12 @@ od_opencv = { version = "0.8.2", default-features = false }
 ort = "=2.0.0-rc.12"
 ndarray = "0.17"
 rayon = "1.10"
-image = { version = "0.25", default-features = false }
+image = { version = "0.25", default-features = false, features = ["jpeg"] }
+actix-web = { version = "4.13", default-features = false, features = ["macros"] }
+actix-files = "0.6"
+futures-util = "0.3"
+tokio = { version = "1", features = ["sync"] }
+toml_edit = "0.22"
 png = "0.18.1"
 minifb = "0.28"
 mot-rs = "0.1.2"

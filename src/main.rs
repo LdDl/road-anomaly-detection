@@ -18,6 +18,14 @@ fn main() -> Result<(), AppError> {
     let app_settings = AppSettings::new_from_file(path_to_config)?;
     println!("Settings are:\n{}", app_settings);
     let mut app = app_settings.build()?;
+    let _api_server = if app_settings.rest_api.enable {
+        let state = road_anomaly_detection::rest_api::ApiState::new(&app_settings, path_to_config)?;
+        let server = road_anomaly_detection::rest_api::start(&app_settings.rest_api, state.clone())?;
+        app.api_state = Some(state);
+        Some(server)
+    } else {
+        None
+    };
     app.run()?;
 
     Ok(())

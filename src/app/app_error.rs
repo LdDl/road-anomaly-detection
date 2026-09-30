@@ -26,6 +26,7 @@ pub enum AppError {
     WindowError(minifb::Error),
     SignalError(ctrlc::Error),
     TOMLError(toml::de::Error),
+    IOError(std::io::Error),
 }
 
 impl From<AppInternalError> for AppError {
@@ -61,5 +62,11 @@ impl From<minifb::Error> for AppError {
 impl From<ctrlc::Error> for AppError {
     fn from(e: ctrlc::Error) -> Self {
         AppError::SignalError(e)
+    }
+}
+
+impl From<std::io::Error> for AppError {
+    fn from(e: std::io::Error) -> Self {
+        AppError::IOError(e)
     }
 }

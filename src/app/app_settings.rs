@@ -77,7 +77,7 @@ pub struct TrackingSettings {
     pub lifetime_seconds_max: u64,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct ZoneSettings {
     pub id: String,
     pub geometry: [[i32; 2]; 4],
@@ -100,7 +100,29 @@ pub struct RedisPublisherSettings {
     pub channel_name: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(default)]
+pub struct RestApiSettings {
+    pub enable: bool,
+    pub host: String,
+    pub port: u16,
+    pub web_ui_dir: String,
+    pub preview_fps: u8,
+}
+
+impl Default for RestApiSettings {
+    fn default() -> Self {
+        Self {
+            enable: false,
+            host: "127.0.0.1".to_string(),
+            port: 8080,
+            web_ui_dir: "./web/dist".to_string(),
+            preview_fps: 5,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone)]
 pub struct AppSettings {
     pub application_info: ApplicationInfo,
     pub input: InputSettings,
@@ -109,6 +131,8 @@ pub struct AppSettings {
     pub tracking: TrackingSettings,
     pub zones: Option<Vec<ZoneSettings>>,
     pub publishers: Option<PublishersSettings>,
+    #[serde(default)]
+    pub rest_api: RestApiSettings,
 }
 
 impl AppSettings {
@@ -134,6 +158,7 @@ impl AppSettings {
             tracking: self.tracking.clone(),
             zones_settings: self.zones.clone(),
             publishers: self.publishers.clone(),
+            api_state: None,
         })
     }
 }
