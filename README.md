@@ -98,7 +98,7 @@ Wait until event has come:
 
 ### Requirements
 
-- Rust 1.91 or newer, as required by `od_opencv 0.8.2`.
+- Rust 1.91 or newer, as required by `od_opencv 0.10.1`.
 - `ffmpeg` and `ffprobe` on `PATH` for video files, RTSP streams and V4L2 cameras. FFmpeg must support `-fps_mode passthrough`.
 - `gst-launch-1.0` and the source-specific plugins for GStreamer pipelines, including CSI cameras.
 - A desktop session for the optional `minifb` preview. Set `output.enable = false` for headless operation.
@@ -128,7 +128,7 @@ For CUDA inference:
 cargo build --release --locked --features ort-cuda
 ```
 
-The feature names are `ort-backend` and `ort-cuda`; `ort-cuda` also enables `ort-backend`. Both builds produce `target/release/road-anomaly-detector` and exclude OpenCV. The `ort` crate is pinned to `2.0.0-rc.12` because `od_opencv 0.8.2` uses that release's CUDA API.
+The feature names are `ort-backend` and `ort-cuda`; `ort-cuda` also enables `ort-backend`. Both builds produce `target/release/road-anomaly-detector` and exclude OpenCV. The `ort` crate is pinned to `2.0.0-rc.12` because `od_opencv 0.10.1` uses that release's CUDA API.
 
 ### Model
 
@@ -276,7 +276,7 @@ Bounding boxes and center points use original frame pixel coordinates, with the 
 
 * MOG2 - https://docs.opencv.org/4.x/d1/dc5/tutorial_background_subtraction.html
 * MOT (Multi-object tracking) in Rust programming language - https://github.com/LdDl/mot-rs
-* ONNX Runtime backend - https://docs.rs/od_opencv/0.8.2/od_opencv/
+* ONNX Runtime backend - https://docs.rs/od_opencv/0.10.1/od_opencv/
 * Object detection in Rust programming language via YOLO - https://github.com/LdDl/object-detection-opencv-rust
 * YOLO v3 paper - https://arxiv.org/abs/1804.02767, Joseph Redmon, Ali Farhadi
 * YOLO v4 paper - https://arxiv.org/abs/2004.10934, Alexey Bochkovskiy, Chien-Yao Wang, Hong-Yuan Mark Liao
