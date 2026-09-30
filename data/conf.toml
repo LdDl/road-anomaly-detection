@@ -6,7 +6,7 @@
     # Enable the web zone editor and REST API. Each instance needs a different port.
     enable = true
     host = "127.0.0.1"
-    port = 42003
+    port = 44001
     # Build the interface with: cd web && npm ci && npm run build
     web_ui_dir = "./web/dist"
     # JPEG preview frame rate, from 1 to 30. Detection keeps its own processing rate.

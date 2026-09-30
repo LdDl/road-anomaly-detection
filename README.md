@@ -207,12 +207,12 @@ Enable the server in your configuration, then rebuild and start the detector as 
 [rest_api]
 enable = true
 host = "127.0.0.1"
-port = 42003
+port = 44001
 web_ui_dir = "./web/dist"
 preview_fps = 5
 ```
 
-Open `http://127.0.0.1:42003`. Draw four vertices along the boundary of a zone; use the right mouse button or the edit button to move vertices. "Apply" applies the draft on the next processed frame. "Save to TOML" also writes it to the original configuration, creating a backup and preserving unrelated sections and comments. Saving requires write access to the configuration directory. The web server is disabled if `[rest_api]` is omitted.
+Open `http://127.0.0.1:44001`. Draw four vertices along the boundary of a zone; use the right mouse button or the edit button to move vertices. "Apply" applies the draft on the next processed frame. "Save to TOML" also writes it to the original configuration, creating a backup and preserving unrelated sections and comments. Saving requires write access to the configuration directory. The web server is disabled if `[rest_api]` is omitted.
 
 Each detector instance has its own API port and configuration. Deploy `web/dist` alongside the binary and configure its path; Node.js is only needed to build these files. With Docker, mount the configuration directory writable, as shown in [docker-compose.yml](docker-compose.yml). The API has no authentication, so keep the default loopback binding and use an SSH tunnel, or place it behind an authenticated proxy.
 

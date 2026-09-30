@@ -115,7 +115,7 @@ impl Default for RestApiSettings {
         Self {
             enable: false,
             host: "127.0.0.1".to_string(),
-            port: 42003,
+            port: 44001,
             web_ui_dir: "./web/dist".to_string(),
             preview_fps: 5,
         }
