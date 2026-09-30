@@ -52,6 +52,8 @@ impl App {
 
         let (tx_capture, rx_capture): (mpsc::SyncSender<ThreadedFrame>, mpsc::Receiver<ThreadedFrame>) = mpsc::sync_channel(0);
         thread::spawn(move || {
+            // syntethic delay
+            // std::thread::sleep(std::time::Duration::from_millis(1000));
             let mut frames_counter: f32 = 0.0;
             let mut total_seconds: f32 = 0.0;
             let mut overall_seconds: f32 = 0.0;

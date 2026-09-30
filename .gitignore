@@ -4,3 +4,5 @@ data/*.cfg
 data/*.weights
 data/*.onnx
 data/*.bak
+/web/node_modules
+/web/dist
