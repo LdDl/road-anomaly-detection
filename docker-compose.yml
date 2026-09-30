@@ -66,7 +66,7 @@ services:
       # conf.toml: video_src = "/app/cctv_example.mp4", network_weights = "/app/best_small608.onnx",
       # output.enable = false, Redis host = "127.0.0.1"
       # Mount the directory writable so the web editor can back up and atomically replace TOML.
-      # rest_api: enable = true, host = "127.0.0.1", port = 8080, web_ui_dir = "/web"
+      # rest_api: enable = true, host = "127.0.0.1", port = 42003, web_ui_dir = "/web"
       # With host networking, assign a different rest_api.port to each detector instance.
       - /var/microservices/road_accidents_detection:/app
       # Copy the contents of web/dist here after building the interface.
