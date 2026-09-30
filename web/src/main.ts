@@ -2,6 +2,7 @@ import { Canvas, Circle, FabricObject, FabricText, Line, type Point } from 'fabr
 import { CustomPolygon } from './canvas/custom_polygon';
 import { ApiError, describeError, getLanguage, t, translatePage } from './i18n';
 import { createLanguagePicker } from './language_picker';
+import { playMjpeg, type MjpegPlayer, type StreamState } from './mjpeg_stream';
 import './style.css';
 
 type Coordinates = [number, number];
@@ -81,13 +82,12 @@ let draftPoints: Coordinates[] = [];
 let polygons: CustomPolygon[] = [];
 let helpers: FabricObject[] = [];
 let rebuilding = false;
-let streamStarted = false;
+let stream: MjpegPlayer | undefined;
 let streamReady = false;
 let previewFailed = false;
 let lastHealth: Health | undefined;
 let checkedConnection = false;
 let noticeMessage: (() => string) | undefined;
-let streamRetry: ReturnType<typeof setTimeout> | undefined;
 
 const colors: Color[] = [[255, 175, 243], [166, 240, 252], [255, 251, 232], [188, 233, 171]];
 const clone = <T>(value: T): T => structuredClone(value);
@@ -413,38 +413,37 @@ async function submit(save: boolean) {
 ui.apply.onclick = () => void submit(false);
 ui.save.onclick = () => void submit(true);
 
-function startStream() {
-    if (streamStarted) return;
-    streamStarted = true;
-    ui.stream.src = `/live_streaming?t=${Date.now()}`;
-}
-
-ui.stream.onload = () => {
-    streamReady = true;
-    previewFailed = false;
-    updateStatus();
-    ui.stage.hidden = false;
-    element('video-placeholder').hidden = true;
-    fitCanvas();
-    updateActions();
-};
-ui.stream.onerror = () => {
-    streamReady = false;
-    previewFailed = true;
-    streamStarted = false;
-    ui.stage.hidden = true;
-    element('video-placeholder').hidden = false;
+function streamStateChanged(state: StreamState) {
+    streamReady = state === 'playing';
+    previewFailed = state === 'stalled';
+    ui.stage.hidden = !streamReady;
+    element('video-placeholder').hidden = streamReady;
+    if (streamReady) fitCanvas();
     updatePreviewText();
     updateStatus();
     updateActions();
-    clearTimeout(streamRetry);
-    streamRetry = setTimeout(() => { if (online) startStream(); }, 3000);
-};
+}
+
+function stopStream() {
+    stream?.stop();
+    stream = undefined;
+    streamStateChanged('connecting');
+}
+
+function startStream() {
+    if (!stream && !document.hidden) stream = playMjpeg('/live_streaming', ui.stream, streamStateChanged);
+}
+
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stopStream();
+    else startStream();
+});
+window.addEventListener('pagehide', stopStream);
+window.addEventListener('pageshow', startStream);
 
 async function poll() {
     try {
         const health = await request<Health>('/api/health');
-        const reconnected = !online;
         online = true;
         checkedConnection = true;
         lastHealth = health;
@@ -460,8 +459,6 @@ async function poll() {
             redraw();
         }
         if (!loaded && !busy) await loadZones();
-        if (reconnected) streamStarted = false;
-        if (!streamStarted) startStream();
         if (loaded && health.revision !== revision && !busy) notice(() => t('remoteChanged'), true);
     } catch {
         online = false;
@@ -548,4 +545,5 @@ function refreshLanguage() {
 const languagePicker = createLanguagePicker(document.querySelector<HTMLElement>('.language-picker')!, refreshLanguage);
 
 refreshLanguage();
+startStream();
 void poll();
