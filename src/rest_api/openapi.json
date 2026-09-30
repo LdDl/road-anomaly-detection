@@ -1,0 +1,584 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Road anomaly detector API",
+    "version": "0.1.0",
+    "description": "Zone editing API. Coordinates are original-frame pixels. Runtime updates and persistent saving are separate operations."
+  },
+  "paths": {
+    "/api/ping": {
+      "get": {
+        "summary": "Check HTTP availability",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/health": {
+      "get": {
+        "summary": "Processing status, video dimensions, frame count and applied/saved revisions",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/api/zones": {
+      "get": {
+        "summary": "Read editable zones. whole_frame means the default zone is active.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Zones"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Replace zones in memory; applied on the next processed frame. An empty list disables all zones. whole_frame=true restores the default zone.",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Zones"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid zone data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Zone not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Revision conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Configuration could not be saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ZonesUpdate"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mutations/zones/create": {
+      "post": {
+        "summary": "Create a zone in memory",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Zones"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid zone data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Zone not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Revision conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Configuration could not be saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ZoneCreate"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mutations/zones/update": {
+      "post": {
+        "summary": "Update a zone in memory",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Zones"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid zone data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Zone not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Revision conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Configuration could not be saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ZoneUpdate"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mutations/zones/delete": {
+      "post": {
+        "summary": "Delete a zone in memory",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Zones"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid zone data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Zone not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Revision conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Configuration could not be saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ZoneDelete"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/mutations/save_config": {
+      "post": {
+        "summary": "Persist the current zone revision to the startup TOML file, retaining other settings and creating a backup.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "description": "Invalid zone data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Zone not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Revision conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Configuration could not be saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Save"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/frame": {
+      "get": {
+        "summary": "Latest JPEG preview; waits up to five seconds for the first image",
+        "responses": {
+          "200": {
+            "description": "JPEG frame",
+            "content": {
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "No frame available"
+          }
+        }
+      }
+    },
+    "/live_streaming": {
+      "get": {
+        "summary": "MJPEG preview in original frame coordinates; slow clients receive the latest frame",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "multipart/x-mixed-replace": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Zone": {
+        "type": "object",
+        "required": [
+          "id",
+          "geometry"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "geometry": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4,
+            "items": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "color_rgb": {
+            "type": "array",
+            "nullable": true,
+            "minItems": 3,
+            "maxItems": 3,
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 255
+            }
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        }
+      },
+      "Zones": {
+        "type": "object",
+        "required": [
+          "zones",
+          "whole_frame",
+          "revision",
+          "saved_revision"
+        ],
+        "properties": {
+          "zones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Zone"
+            }
+          },
+          "whole_frame": {
+            "type": "boolean"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Revision returned by GET /api/zones. Stale revisions are rejected with HTTP 409."
+          },
+          "saved_revision": {
+            "type": "integer"
+          }
+        }
+      },
+      "ZonesUpdate": {
+        "type": "object",
+        "properties": {
+          "zones": {
+            "type": "array",
+            "maxItems": 256,
+            "items": {
+              "$ref": "#/components/schemas/Zone"
+            }
+          },
+          "whole_frame": {
+            "type": "boolean",
+            "default": false
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Revision returned by GET /api/zones. Stale revisions are rejected with HTTP 409."
+          }
+        },
+        "required": [
+          "zones",
+          "revision"
+        ]
+      },
+      "ZoneCreate": {
+        "type": "object",
+        "properties": {
+          "zone": {
+            "$ref": "#/components/schemas/Zone"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Revision returned by GET /api/zones. Stale revisions are rejected with HTTP 409."
+          }
+        },
+        "required": [
+          "zone",
+          "revision"
+        ]
+      },
+      "ZoneUpdate": {
+        "type": "object",
+        "properties": {
+          "zone_id": {
+            "type": "string"
+          },
+          "zone": {
+            "$ref": "#/components/schemas/Zone"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Revision returned by GET /api/zones. Stale revisions are rejected with HTTP 409."
+          }
+        },
+        "required": [
+          "zone_id",
+          "zone",
+          "revision"
+        ]
+      },
+      "ZoneDelete": {
+        "type": "object",
+        "properties": {
+          "zone_id": {
+            "type": "string"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Revision returned by GET /api/zones. Stale revisions are rejected with HTTP 409."
+          }
+        },
+        "required": [
+          "zone_id",
+          "revision"
+        ]
+      },
+      "Save": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Revision returned by GET /api/zones. Stale revisions are rejected with HTTP 409."
+          }
+        },
+        "required": [
+          "revision"
+        ]
+      }
+    }
+  }
+}
