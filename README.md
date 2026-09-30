@@ -1,6 +1,6 @@
 # Yet another toy utility for registering anomaly situations on roads
 
-In W.I.P. stage
+<img src="web/public/lucy-camera.svg" alt="Lucy holding a surveillance camera" width="160">
 
 ## Table of Contents
 
@@ -67,6 +67,18 @@ The current parameters are set in code:
 The model update and defaults follow the [MOG2 reference implementation](https://github.com/opencv/opencv/blob/4.x/modules/video/src/bgfg_gaussmix2.cpp). This implementation handles BGR24 frames without shadow detection. Numerical equivalence and performance against the original version have not been measured.
 
 ## Screenshots
+
+### Web configurator
+
+Zone editor with the video preview unavailable:
+
+<img src="docs/ui_showcase_empty_preview.png" alt="Web zone editor with saved zones and an unavailable video preview" width="1080">
+
+Live preview with configured zones, a detected object's bounding box and its tracking ID:
+
+<img src="docs/ui_showcase_got_detection.png" alt="Web zone editor showing a detected object and its tracking ID over the live video" width="1080">
+
+### Original version
 
 These screenshots were captured with the original version. The current preview uses `minifb` and Rust drawing primitives, so its appearance could differ.
 
