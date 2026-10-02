@@ -3,6 +3,7 @@ use crate::frame::RawFrame;
 
 pub struct ThreadedFrame {
     pub frame: RawFrame,
+    pub stream_generation: u64,
     pub overall_seconds: f32,
     pub current_second: f32
 }

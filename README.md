@@ -167,6 +167,8 @@ The complete example is in [data/conf.toml](data/conf.toml).
 
 The legacy `"rtsp"` value also selects file and GStreamer inputs. For GStreamer, separate pipeline elements with ` ! ` and specify `width=(int)`, `height=(int)` and `framerate=(fraction)` caps. The capture code replaces the sink and converts output to BGR24. A CSI camera pipeline is included as a commented example in the configuration file.
 
+RTSP/RTSPS capture uses TCP with a 10-second socket I/O timeout. After an established stream closes or fails to deliver a complete frame, capture retries every 2 seconds. Reconnected video is scaled to the initial frame dimensions; MOG2 and tracking restart when frames resume, while configured zones remain unchanged. Video files stop at end of file.
+
 ### Detection, tracking and zones
 
 - `detection.network_weights`: path to the ONNX model. `network_format` defaults to `"onnx"`.

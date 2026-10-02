@@ -39,6 +39,9 @@ impl Zone {
             objects_registered: HashSet::new()
         }
     }
+    pub fn reset_tracking(&mut self) {
+        self.objects_registered.clear();
+    }
     pub fn contains_point(&self, x: f32, y: f32) -> bool {
         let x = x as f64;
         let y = y as f64;

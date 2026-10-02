@@ -75,6 +75,7 @@ impl App {
                 }
                 let frame = ThreadedFrame{
                     frame: read_frame,
+                    stream_generation: video_capture.stream_generation,
                     overall_seconds,
                     current_second: second_fraction,
                 };
@@ -85,7 +86,7 @@ impl App {
                     }
                 };
             }
-            println!("Video capture has been closed successfully");
+            println!("Video capture stopped");
         });
 
 
@@ -158,12 +159,23 @@ impl App {
 
         let scale_width = width / self.detection.net_width as f32;
         let scale_height = height / self.detection.net_height as f32;
+        let mut stream_generation = 0;
 
         for received in rx_capture {
             if !running.load(Ordering::Relaxed) {
                 break;
             }
             let mut frame = received.frame;
+            if received.stream_generation != stream_generation {
+                // Do not carry object lifetimes or the background across a camera outage.
+                bg_subtractor = BackgroundSubtractorMOG2::new(fps.floor() as usize, 16.0);
+                tracker = Tracker::new(fps.floor() as usize, 0.3);
+                for zone in zones.iter_mut() {
+                    zone.reset_tracking();
+                }
+                stream_generation = received.stream_generation;
+                println!("RTSP frames resumed; background and tracker reset");
+            }
             if let Some(state) = &self.api_state {
                 if let Some((revision, settings)) = state.zones_since(zones_revision) {
                     let mut previous_zones = std::mem::take(&mut zones);

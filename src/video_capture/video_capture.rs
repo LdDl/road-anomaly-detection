@@ -2,7 +2,7 @@ use crate::frame::RawFrame;
 use std::fmt;
 use std::io::{self, BufRead, BufReader, Read, Write};
 use std::process::{Child, ChildStderr, ChildStdout, Command, Stdio};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -47,7 +47,10 @@ impl From<io::Error> for VideoCaptureError {
 
 pub struct VideoCapture {
     process: VideoCaptureProcess,
+    command: Command,
+    reconnect: bool,
     stdout: ChildStdout,
+    pub stream_generation: u64,
     pub width: u32,
     pub height: u32,
     pub fps: f32,
@@ -57,10 +60,16 @@ pub struct VideoCapture {
 #[derive(Clone)]
 pub struct VideoCaptureProcess {
     child: Arc<Mutex<Child>>,
+    stopped: Arc<AtomicBool>,
 }
 
 impl VideoCaptureProcess {
     pub fn stop(&self) {
+        self.stopped.store(true, Ordering::Relaxed);
+        self.terminate();
+    }
+
+    fn terminate(&self) {
         let mut child = self.child.lock().unwrap_or_else(|err| err.into_inner());
         if let Ok(Some(_)) = child.try_wait() {
             return;
@@ -95,6 +104,65 @@ impl VideoCapture {
     }
 
     pub fn read_frame(&mut self) -> Result<Option<RawFrame>, VideoCaptureError> {
+        loop {
+            if self.process.stopped.load(Ordering::Relaxed) {
+                return Ok(None);
+            }
+            let result = self.read_frame_once();
+            if self.process.stopped.load(Ordering::Relaxed) {
+                return Ok(None);
+            }
+            match result {
+                Ok(Some(frame)) => return Ok(Some(frame)),
+                Err(err) if !self.reconnect => return Err(err),
+                Err(err) => eprintln!("RTSP frame read failed: {}", err),
+                Ok(None) => {}
+            }
+            let status = self.process.child.lock().unwrap_or_else(|err| err.into_inner()).try_wait()?;
+            if let Some(status) = status {
+                eprintln!("Video capture process exited with {}", status);
+                if !self.reconnect && !status.success() {
+                    return Err(VideoCaptureInternalError{typ: 0, txt: format!("Capture process exited with {}", status)}.into());
+                }
+            } else {
+                eprintln!("Video capture output closed before process exit");
+            }
+            if !self.reconnect {
+                return Ok(None);
+            }
+            if !self.restart()? {
+                return Ok(None);
+            }
+        }
+    }
+
+    fn restart(&mut self) -> Result<bool, VideoCaptureError> {
+        self.process.terminate();
+        loop {
+            eprintln!("RTSP stream interrupted; reconnecting in 2 seconds");
+            for _ in 0..20 {
+                if self.process.stopped.load(Ordering::Relaxed) {
+                    return Ok(false);
+                }
+                thread::sleep(Duration::from_millis(100));
+            }
+            let mut child = self.process.child.lock().unwrap_or_else(|err| err.into_inner());
+            if self.process.stopped.load(Ordering::Relaxed) {
+                return Ok(false);
+            }
+            match spawn_capture(&mut self.command) {
+                Ok((replacement, stdout)) => {
+                    *child = replacement;
+                    self.stdout = stdout;
+                    self.stream_generation += 1;
+                    return Ok(true);
+                },
+                Err(err) => eprintln!("Can't restart RTSP capture: {}", err),
+            }
+        }
+    }
+
+    fn read_frame_once(&mut self) -> Result<Option<RawFrame>, VideoCaptureError> {
         let row_size = self.width as usize * 3;
         let mut frame = RawFrame {
             data: vec![0; self.row_stride * self.height as usize],
@@ -136,6 +204,7 @@ pub fn get_video_capture(video_src: &str, typ: String) -> Result<VideoCapture, V
         source = format!("/dev/video{}", device_id);
     }
     let gstreamer = source.contains(" ! ") && !source.starts_with("rtsp://") && !source.starts_with("rtsps://");
+    let reconnect = source.starts_with("rtsp://") || source.starts_with("rtsps://");
     let mut command;
     let (width, height, fps) = if gstreamer {
         let width = gst_value(&source, "width", "int").and_then(|s| s.parse::<u32>().ok()).unwrap_or(0);
@@ -179,7 +248,12 @@ pub fn get_video_capture(video_src: &str, typ: String) -> Result<VideoCapture, V
         command = Command::new("ffmpeg");
         configure_input(&mut command, &source);
         // Keep repeated messages separate so each one can be filtered from stderr.
-        command.args(["-nostdin", "-v", "repeat+error", "-i", &source, "-map", "0:v:0", "-an", "-sn", "-dn", "-fps_mode", "passthrough", "-f", "rawvideo", "-pix_fmt", "bgr24", "pipe:1"]);
+        command.args(["-nostdin", "-v", "repeat+error", "-i", &source, "-map", "0:v:0", "-an", "-sn", "-dn"]);
+        if reconnect {
+            // Keep raw frame boundaries and zone coordinates stable if the camera changes resolution.
+            command.args(["-s", &format!("{}x{}", width, height)]);
+        }
+        command.args(["-fps_mode", "passthrough", "-f", "rawvideo", "-pix_fmt", "bgr24", "pipe:1"]);
         (width, height, fps)
     };
     let row_stride = if gstreamer { (width as usize * 3 + 3) & !3 } else { width as usize * 3 };
@@ -187,19 +261,28 @@ pub fn get_video_capture(video_src: &str, typ: String) -> Result<VideoCapture, V
         return Err(VideoCaptureInternalError{typ: 2, txt: format!("Invalid video dimensions: {}x{}", width, height)}.into());
     }
     let stderr = if gstreamer { Stdio::inherit() } else { Stdio::piped() };
-    let mut child = command.stdin(Stdio::null()).stdout(Stdio::piped()).stderr(stderr).spawn()?;
-    if let Some(stderr) = child.stderr.take() {
-        thread::spawn(move || forward_ffmpeg_stderr(stderr));
-    }
-    let stdout = child.stdout.take().expect("Video capture stdout is not piped");
+    command.stdin(Stdio::null()).stdout(Stdio::piped()).stderr(stderr);
+    let (child, stdout) = spawn_capture(&mut command)?;
     Ok(VideoCapture {
-        process: VideoCaptureProcess{child: Arc::new(Mutex::new(child))},
+        process: VideoCaptureProcess{child: Arc::new(Mutex::new(child)), stopped: Arc::new(AtomicBool::new(false))},
+        command,
+        reconnect,
         stdout,
+        stream_generation: 0,
         width,
         height,
         fps,
         row_stride,
     })
+}
+
+fn spawn_capture(command: &mut Command) -> io::Result<(Child, ChildStdout)> {
+    let mut child = command.spawn()?;
+    if let Some(stderr) = child.stderr.take() {
+        thread::spawn(move || forward_ffmpeg_stderr(stderr));
+    }
+    let stdout = child.stdout.take().expect("Video capture stdout is not piped");
+    Ok((child, stdout))
 }
 
 fn forward_ffmpeg_stderr(stderr: ChildStderr) {
@@ -227,7 +310,7 @@ fn forward_ffmpeg_stderr(stderr: ChildStderr) {
 
 fn configure_input(command: &mut Command, source: &str) {
     if source.starts_with("rtsp://") || source.starts_with("rtsps://") {
-        command.args(["-rtsp_transport", "tcp"]);
+        command.args(["-rtsp_transport", "tcp", "-timeout", "10000000"]);
     } else if source.starts_with("/dev/video") {
         command.args(["-f", "v4l2"]);
     }
@@ -247,3 +330,7 @@ fn parse_frame_rate(value: &str) -> f32 {
     };
     if fps.is_finite() && fps > 0.0 { fps } else { 30.0 }
 }
+
+#[cfg(all(test, unix))]
+#[path = "tests.rs"]
+mod tests;
